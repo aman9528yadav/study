@@ -56,6 +56,7 @@ export async function enrollInBatch(batchId: string) {
     })
     
     revalidatePath(`/dashboard/batches/${batchId}`)
+    revalidatePath(`/dashboard/store`)
     return { success: true }
   } catch (error) {
     console.error("Enrollment error:", error)

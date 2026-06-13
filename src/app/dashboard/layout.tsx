@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import { BookOpen, Calendar, LayoutDashboard, Settings, Video, Ban, Clock, LogOut } from "lucide-react"
+import { BookOpen, Calendar, LayoutDashboard, Settings, Video, Ban, Clock, LogOut, Store } from "lucide-react"
 import { UserMenu } from "@/components/user-menu"
 import { getUserSession, logout } from "@/app/actions/auth"
 import { prisma } from "@/lib/prisma"
@@ -72,6 +72,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <a href="/dashboard" className="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-md transition-colors">
             <LayoutDashboard className="w-5 h-5" />
             <span className="font-medium">Dashboard</span>
+          </a>
+          <a href="/dashboard/store" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:text-foreground rounded-md transition-colors">
+            <Store className="w-5 h-5" />
+            <span className="font-medium">Store</span>
           </a>
           <a href="/dashboard/batches" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:text-foreground rounded-md transition-colors">
             <BookOpen className="w-5 h-5" />
