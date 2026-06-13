@@ -81,6 +81,20 @@ export async function getStudentDashboardData() {
     const upcomingTests = 0
     const averageScore = "N/A"
 
+    const recentVideos = videos.map(v => ({
+      id: v.id,
+      title: v.title,
+      description: v.description,
+      youtubeId: v.youtubeId,
+      videoUrl: v.videoUrl,
+      duration: v.duration,
+      createdAt: v.createdAt,
+      batchId: v.chapter.subject.batch.id,
+      batchName: v.chapter.subject.batch.title,
+      chapterName: v.chapter.name,
+      subjectName: v.chapter.subject.name
+    }))
+
     // Map the enrolled batches list for display
     const enrolledBatchesList = user.enrollments.map(e => e.batch)
 
@@ -92,6 +106,7 @@ export async function getStudentDashboardData() {
         upcomingTests,
         averageScore,
         latestVideo,
+        recentVideos,
         enrolledBatchesList,
         userName: user.name
       }
