@@ -17,7 +17,7 @@ export default function DashboardPage() {
       const res = await getStudentDashboardData()
       if (res.success) {
         setData(res.data)
-        if (res.data.enrolledBatchesList.length > 0) {
+        if (res.data?.enrolledBatchesList && res.data.enrolledBatchesList.length > 0) {
           setSelectedBatchId(res.data.enrolledBatchesList[0].id)
         }
       }

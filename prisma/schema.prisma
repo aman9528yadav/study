@@ -53,6 +53,9 @@ model Batch {
   schedule     String?
   features     String   @default("[]") // JSON array of feature strings
 
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -105,6 +108,8 @@ model Video {
   videoUrl    String?  // For Direct Video Uploads
   duration    Int?     // in seconds
   order       Int      @default(0)
+  scheduledAt DateTime? // For upcoming/scheduled videos
+  isPublished Boolean  @default(true) // false = upcoming/scheduled
   createdAt   DateTime @default(now())
 
   chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
@@ -199,6 +204,7 @@ model Category {
   exams       String   @default("[]")
   
   ebooks      Ebook[]
+  batches     Batch[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -14,6 +14,7 @@ export async function getStudentDashboardData() {
       where: { email: userSession.email },
       include: {
         enrollments: {
+          where: { status: "APPROVED" },
           include: {
             batch: true
           }
@@ -33,7 +34,7 @@ export async function getStudentDashboardData() {
           status: "ACTIVE"
         },
         include: {
-          enrollments: { include: { batch: true } }
+          enrollments: { where: { status: "APPROVED" }, include: { batch: true } }
         }
       })
     }

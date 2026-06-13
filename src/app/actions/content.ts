@@ -29,6 +29,8 @@ export async function getBatchContent(batchId: string) {
   }
 }
 
+// ===================== SUBJECTS =====================
+
 export async function createSubject(batchId: string, name: string) {
   try {
     await prisma.subject.create({
@@ -41,6 +43,31 @@ export async function createSubject(batchId: string, name: string) {
     return { success: false, error: "Failed to create subject" }
   }
 }
+
+export async function updateSubject(id: string, name: string, batchId: string) {
+  try {
+    await prisma.subject.update({
+      where: { id },
+      data: { name }
+    })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to update subject" }
+  }
+}
+
+export async function deleteSubject(id: string, batchId: string) {
+  try {
+    await prisma.subject.delete({ where: { id } })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to delete subject" }
+  }
+}
+
+// ===================== CHAPTERS =====================
 
 export async function createChapter(subjectId: string, name: string, batchId: string) {
   try {
@@ -55,6 +82,31 @@ export async function createChapter(subjectId: string, name: string, batchId: st
   }
 }
 
+export async function updateChapter(id: string, name: string, batchId: string) {
+  try {
+    await prisma.chapter.update({
+      where: { id },
+      data: { name }
+    })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to update chapter" }
+  }
+}
+
+export async function deleteChapter(id: string, batchId: string) {
+  try {
+    await prisma.chapter.delete({ where: { id } })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to delete chapter" }
+  }
+}
+
+// ===================== VIDEOS =====================
+
 export async function createVideo(formData: FormData) {
   try {
     const chapterId = formData.get("chapterId") as string
@@ -62,9 +114,18 @@ export async function createVideo(formData: FormData) {
     const description = formData.get("description") as string
     const youtubeId = formData.get("youtubeId") as string
     const videoUrl = formData.get("videoUrl") as string
+    const scheduledAtStr = formData.get("scheduledAt") as string
+    const isPublishedStr = formData.get("isPublished") as string
 
-    if (!chapterId || !title || (!youtubeId && !videoUrl)) {
+    const isPublished = isPublishedStr !== "false"
+    const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null
+
+    // For published videos, require a source. Scheduled ones can be created without a link yet.
+    if (!chapterId || !title) {
       return { success: false, error: "Missing required fields" }
+    }
+    if (isPublished && !youtubeId && !videoUrl) {
+      return { success: false, error: "Please provide a YouTube ID or Video URL" }
     }
 
     const video = await prisma.video.create({
@@ -74,11 +135,11 @@ export async function createVideo(formData: FormData) {
         description,
         youtubeId: youtubeId || null,
         videoUrl: videoUrl || null,
+        scheduledAt,
+        isPublished,
       }
     })
     
-    // We need to revalidate the batch page
-    // Since we don't have batchId directly, we find it:
     const chapter = await prisma.chapter.findUnique({
       where: { id: chapterId },
       include: { subject: true }
@@ -89,10 +150,68 @@ export async function createVideo(formData: FormData) {
     }
 
     return { success: true, data: video }
-  } catch (error) {
-    return { success: false, error: "Failed to create video" }
+  } catch (error: any) {
+    console.error("createVideo error:", error)
+    return { success: false, error: error?.message || "Failed to create video" }
   }
 }
+
+export async function updateVideo(id: string, formData: FormData) {
+  try {
+    const title = formData.get("title") as string
+    const description = formData.get("description") as string
+    const youtubeId = formData.get("youtubeId") as string
+    const videoUrl = formData.get("videoUrl") as string
+    const batchId = formData.get("batchId") as string
+    const scheduledAtStr = formData.get("scheduledAt") as string
+    const isPublishedStr = formData.get("isPublished") as string
+
+    const isPublished = isPublishedStr !== "false"
+    const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null
+
+    await prisma.video.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        youtubeId: youtubeId || null,
+        videoUrl: videoUrl || null,
+        scheduledAt,
+        isPublished,
+      }
+    })
+    
+    if (batchId) revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to update video" }
+  }
+}
+
+export async function deleteVideo(id: string, batchId: string) {
+  try {
+    await prisma.video.delete({ where: { id } })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to delete video" }
+  }
+}
+
+export async function toggleVideoPublished(id: string, isPublished: boolean, batchId: string) {
+  try {
+    await prisma.video.update({
+      where: { id },
+      data: { isPublished }
+    })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to update video status" }
+  }
+}
+
+// ===================== PDFS =====================
 
 export async function createPDF(formData: FormData) {
   try {
@@ -127,5 +246,39 @@ export async function createPDF(formData: FormData) {
   } catch (error) {
     console.error(error)
     return { success: false, error: "Failed to create PDF" }
+  }
+}
+
+export async function updatePDF(id: string, formData: FormData) {
+  try {
+    const title = formData.get("title") as string
+    const type = formData.get("type") as string // "NOTE" or "DPP"
+    const url = formData.get("url") as string
+    const batchId = formData.get("batchId") as string
+
+    await prisma.pDF.update({
+      where: { id },
+      data: {
+        title,
+        type,
+        url,
+      }
+    })
+    
+    if (batchId) revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Failed to update PDF" }
+  }
+}
+
+export async function deletePDF(id: string, batchId: string) {
+  try {
+    await prisma.pDF.delete({ where: { id } })
+    revalidatePath(`/admin/batches/${batchId}`)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Failed to delete PDF" }
   }
 }
