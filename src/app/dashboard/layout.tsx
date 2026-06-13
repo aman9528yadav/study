@@ -20,11 +20,18 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         isBlocked = true
         isTemporary = true
         if (user.suspendedUntil) {
-          const banDate = new Date(user.suspendedUntil).toLocaleString(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'short'
-          })
-          blockReason = `Your account has been temporarily suspended until ${banDate}.`
+          if (new Date() > new Date(user.suspendedUntil)) {
+            // Suspension has expired! Lift the block.
+            isBlocked = false
+            // Optionally, we could update the DB here, but unblocking is enough for access
+            prisma.user.update({ where: { id: user.id }, data: { status: 'ACTIVE', suspendedUntil: null } }).catch(console.error)
+          } else {
+            const banDate = new Date(user.suspendedUntil).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short'
+            })
+            blockReason = `Your account has been temporarily suspended until ${banDate}.`
+          }
         } else {
           blockReason = "Your account has been temporarily suspended until further notice from the administrator."
         }
