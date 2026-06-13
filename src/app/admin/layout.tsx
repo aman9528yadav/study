@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
             S
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-800">Score Plus</h2>
+          <h2 className="text-xl font-bold tracking-tight text-gray-800">studyhub24</h2>
         </div>
         
         <div className="px-4 py-2">
@@ -161,7 +161,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-gray-100 shadow-sm z-10">
           <div className="flex items-center gap-4 flex-1">
             <div className="sm:hidden">
-              <h2 className="text-xl font-bold text-gray-800">Score Plus</h2>
+              <h2 className="text-xl font-bold text-gray-800">studyhub24</h2>
             </div>
             <div className="hidden md:flex items-center relative w-full max-w-md">
               <Search className="w-4 h-4 absolute left-3 text-gray-400" />
