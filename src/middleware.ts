@@ -10,8 +10,8 @@ export async function middleware(req: NextRequest) {
   // Create a supabase client directly here to read the user to check role logic
   // We can't easily rely on the response from updateSession for extracting user
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder_key",
     {
       cookies: {
         getAll() {
