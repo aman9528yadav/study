@@ -45,6 +45,7 @@ export async function getStudentDashboardData() {
     // Fetch videos for these batches using a separate, safer query
     const videos = await prisma.video.findMany({
       where: {
+        isPublished: true,
         chapter: {
           subject: {
             batchId: { in: batchIds }

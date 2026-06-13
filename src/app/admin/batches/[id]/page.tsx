@@ -52,7 +52,7 @@ export default function BatchDetailsPage() {
 
   const fetchContent = async () => {
     setLoading(true)
-    const res = await getBatchContent(batchId)
+    const res = await getBatchContent(batchId, true)
     if (res.success && res.data) {
       setBatch(res.data)
       // Auto-expand first subject and select first chapter

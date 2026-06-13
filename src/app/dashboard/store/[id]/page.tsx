@@ -155,7 +155,7 @@ export default async function BatchDetailsPage({ params }: { params: { id: strin
               Enrollment Pending
             </div>
           ) : (
-            <form action={async () => { await enrollInBatch(batch.id) }}>
+            <form action={enrollInBatch.bind(null, batch.id)}>
               <Button type="submit" className="w-full bg-[#1c2438] hover:bg-slate-800 text-white font-bold rounded-xl py-6 text-lg shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5">
                 Buy Now
               </Button>

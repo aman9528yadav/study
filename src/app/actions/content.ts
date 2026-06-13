@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-export async function getBatchContent(batchId: string) {
+export async function getBatchContent(batchId: string, includeHidden = false) {
   try {
     const batch = await prisma.batch.findUnique({
       where: { id: batchId },
@@ -14,7 +14,10 @@ export async function getBatchContent(batchId: string) {
             chapters: {
               orderBy: { order: 'asc' },
               include: {
-                videos: { orderBy: { order: 'asc' } },
+                videos: {
+                  where: includeHidden ? undefined : { isPublished: true },
+                  orderBy: { order: 'asc' },
+                },
                 pdfs: { orderBy: { order: 'asc' } },
                 tests: true
               }
