@@ -1,9 +1,31 @@
-"use client"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, BookOpen, Database, Activity } from "lucide-react"
+import { prisma } from "@/lib/prisma"
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const [
+    totalStudents,
+    activeBatches,
+    videosCount,
+    pdfsCount,
+    recentEnrollments
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: 'STUDENT' } }),
+    prisma.batch.count(),
+    prisma.video.count(),
+    prisma.pdf.count(),
+    prisma.enrollment.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true } },
+        batch: { select: { title: true } }
+      }
+    })
+  ])
+
+  const contentUploads = videosCount + pdfsCount
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,8 +42,8 @@ export default function AdminPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">10,482</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <div className="text-2xl font-bold">{totalStudents.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Registered on platform</p>
           </CardContent>
         </Card>
         
@@ -31,8 +53,8 @@ export default function AdminPage() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">+2 new this week</p>
+            <div className="text-2xl font-bold">{activeBatches.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Available for enrollment</p>
           </CardContent>
         </Card>
         
@@ -42,19 +64,19 @@ export default function AdminPage() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,245</div>
+            <div className="text-2xl font-bold">{contentUploads.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Videos & PDFs</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Live Now</CardTitle>
-            <Activity className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+            <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">892</div>
-            <p className="text-xs text-muted-foreground">Students active right now</p>
+            <div className="text-2xl font-bold text-blue-500">{recentEnrollments.length}</div>
+            <p className="text-xs text-muted-foreground">Latest enrollments tracked</p>
           </CardContent>
         </Card>
       </div>
@@ -67,31 +89,39 @@ export default function AdminPage() {
           <CardContent className="pl-2">
             {/* Chart placeholder */}
             <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-md bg-muted/20">
-              <span className="text-muted-foreground">Revenue Chart</span>
+              <span className="text-muted-foreground">Revenue Chart (Coming Soon)</span>
             </div>
           </CardContent>
         </Card>
         
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
+            <CardTitle>Recent Enrollments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs">
-                    US
+              {recentEnrollments.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">No recent enrollments</div>
+              ) : (
+                recentEnrollments.map((enrollment) => (
+                  <div key={enrollment.id} className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                      {enrollment.user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none truncate">
+                        {enrollment.user.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-1">
+                        Requested {enrollment.batch.title}
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(enrollment.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">New Enrollment</p>
-                    <p className="text-xs text-muted-foreground">Student {i} purchased Physics Batch</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {i * 10}m ago
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
