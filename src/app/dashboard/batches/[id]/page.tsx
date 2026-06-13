@@ -7,13 +7,15 @@ import { getBatchContent } from "@/app/actions/content"
 import { checkEnrollment, enrollInBatch } from "@/app/actions/enrollment"
 import { VideoPlayer } from "@/components/video-player"
 import Link from "next/link"
+import { getTimeUntil } from "@/lib/utils"
 
 // Helper to get youtube thumbnail
 const getYoutubeThumbnail = (urlOrId: string) => {
-  if (!urlOrId) return "/placeholder-video.jpg"
+  if (!urlOrId) return null
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
   const match = urlOrId.match(regExp)
   const videoId = (match && match[2].length === 11) ? match[2] : urlOrId
+  if (!match && videoId.length > 15) return null
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
 }
 
@@ -207,9 +209,9 @@ export default function StudentClassroomPage() {
                   >
                     {/* Thumbnail */}
                     <div className="relative w-full sm:w-48 aspect-video rounded-lg overflow-hidden shrink-0 bg-black">
-                      {video.youtubeId ? (
+                      {getYoutubeThumbnail(video.youtubeId || video.videoUrl) ? (
                         <img 
-                          src={getYoutubeThumbnail(video.youtubeId)} 
+                          src={getYoutubeThumbnail(video.youtubeId || video.videoUrl)!} 
                           alt="Thumbnail"
                           className="w-full h-full object-cover opacity-80"
                         />
@@ -225,7 +227,10 @@ export default function StudentClassroomPage() {
                           {isUpcoming ? (
                             <div className="flex flex-col items-center">
                               <Calendar className="w-6 h-6 text-white/80 mb-1" />
-                              <span className="text-white/80 text-[10px] font-bold">UPCOMING</span>
+                              <span className="text-white/80 text-[10px] font-bold text-center leading-tight">
+                                UPCOMING<br/>
+                                <span className="text-indigo-300">{getTimeUntil(video.scheduledAt) ? `Starts ${getTimeUntil(video.scheduledAt)}` : ''}</span>
+                              </span>
                             </div>
                           ) : (
                             <Lock className="w-8 h-8 text-white/80" />

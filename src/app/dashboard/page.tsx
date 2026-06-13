@@ -5,6 +5,16 @@ import { getStudentDashboardData } from "@/app/actions/dashboard"
 import { Card } from "@/components/ui/card"
 import { ChevronDown, PlayCircle, MessageCircle, Clock, Video } from "lucide-react"
 import Link from "next/link"
+import { getTimeUntil } from "@/lib/utils"
+
+const getYoutubeThumbnail = (urlOrId: string) => {
+  if (!urlOrId) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = urlOrId.match(regExp)
+  const videoId = (match && match[2].length === 11) ? match[2] : urlOrId
+  if (!match && videoId.length > 15) return null // If it's a long non-youtube URL, don't try to load it from YouTube
+  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+}
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
@@ -157,9 +167,9 @@ export default function DashboardPage() {
                 <Link key={video.id} href={`/dashboard/batches/${selectedBatchId}`}>
                   <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 group">
                     <div className="relative aspect-video bg-slate-900">
-                      {video.youtubeId ? (
+                      {getYoutubeThumbnail(video.youtubeId || video.videoUrl) ? (
                         <img 
-                          src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
+                          src={getYoutubeThumbnail(video.youtubeId || video.videoUrl)!}
                           alt={video.title}
                           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                         />
@@ -170,7 +180,9 @@ export default function DashboardPage() {
                       )}
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                       <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider text-white">
-                        {new Date(video.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {video.scheduledAt && new Date(video.scheduledAt) > new Date() 
+                          ? `Starts ${getTimeUntil(video.scheduledAt)}`
+                          : new Date(video.scheduledAt || video.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </div>
                     </div>
                     <div className="p-4">
