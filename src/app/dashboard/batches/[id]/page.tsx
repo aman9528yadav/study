@@ -73,6 +73,10 @@ export default function StudentClassroomPage() {
 
   const handlePlayVideo = (video: any) => {
     if (!isEnrolled) return
+    if (video.scheduledAt && new Date(video.scheduledAt) > new Date()) {
+      alert("This class is scheduled for a future time and cannot be played yet.")
+      return
+    }
     setActiveVideo(video)
     topRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -189,14 +193,16 @@ export default function StudentClassroomPage() {
             <div className="space-y-3">
               {activeChapter.videos.map((video: any) => {
                 const isActive = activeVideo?.id === video.id
+                const isUpcoming = video.scheduledAt && new Date(video.scheduledAt) > new Date()
+                const canPlay = isEnrolled && !isUpcoming
                 return (
                   <button
                     key={video.id}
-                    disabled={!isEnrolled}
+                    disabled={!canPlay}
                     onClick={() => handlePlayVideo(video)}
                     className={`w-full flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 bg-[#1c2438] hover:bg-[#252f48] border rounded-xl transition-all text-left
                       ${isActive ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : "border-[#2a344a]"}
-                      ${!isEnrolled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
+                      ${!canPlay ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
                     `}
                   >
                     {/* Thumbnail */}
@@ -214,9 +220,16 @@ export default function StudentClassroomPage() {
                         </div>
                       )}
                       
-                      {!isEnrolled && (
+                      {!canPlay && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                          <Lock className="w-8 h-8 text-white/80" />
+                          {isUpcoming ? (
+                            <div className="flex flex-col items-center">
+                              <Calendar className="w-6 h-6 text-white/80 mb-1" />
+                              <span className="text-white/80 text-[10px] font-bold">UPCOMING</span>
+                            </div>
+                          ) : (
+                            <Lock className="w-8 h-8 text-white/80" />
+                          )}
                         </div>
                       )}
                       {isActive && (
@@ -437,9 +450,8 @@ export default function StudentClassroomPage() {
           </div>
         )}
 
-        {/* Main Content Area */}
-        {/* If no subject is active, show the Batch Overview (Level 1) */}
-        {!activeSubject && (
+        {/* Main Content Area - Only visible if enrolled */}
+        {isEnrolled && !activeSubject && (
           <>
             {renderTabs()}
             
@@ -469,7 +481,7 @@ export default function StudentClassroomPage() {
         )}
 
         {/* If subject is active but no chapter, show Chapters List (Level 2) */}
-        {activeSubject && !activeChapter && (
+        {isEnrolled && activeSubject && !activeChapter && (
           <>
             <div className="mb-6 flex items-center gap-2 text-sm text-slate-400">
               <button onClick={() => setActiveSubject(null)} className="hover:text-white transition-colors">Subjects</button>
@@ -481,7 +493,7 @@ export default function StudentClassroomPage() {
         )}
 
         {/* If chapter is active, show Videos List (Level 3) */}
-        {activeSubject && activeChapter && (
+        {isEnrolled && activeSubject && activeChapter && (
           <>
             <div className="mb-4 flex items-center gap-2 text-sm text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
               <button onClick={() => { setActiveChapter(null); setActiveSubject(null) }} className="hover:text-white transition-colors">Subjects</button>

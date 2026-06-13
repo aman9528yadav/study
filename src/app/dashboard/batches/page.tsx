@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BookOpen } from "lucide-react"
-import { getBatches } from "@/app/actions/batch"
+import { getMyBatches } from "@/app/actions/batch"
 import Link from "next/link"
 
 export default function MyBatchesPage() {
@@ -13,7 +13,7 @@ export default function MyBatchesPage() {
 
   useEffect(() => {
     async function fetchBatches() {
-      const res = await getBatches()
+      const res = await getMyBatches()
       if (res.success) {
         setBatches(res.data || [])
       }
@@ -24,16 +24,27 @@ export default function MyBatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Available Batches</h1>
-        <p className="text-muted-foreground mt-1">Explore available courses and batches on the platform.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Batches</h1>
+          <p className="text-muted-foreground mt-1">Batches you are currently enrolled in.</p>
+        </div>
+        <Link href="/dashboard/store">
+          <Button variant="outline">Explore More Courses</Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {loading ? (
-          <p className="text-muted-foreground">Loading batches...</p>
+          <p className="text-muted-foreground">Loading your batches...</p>
         ) : batches.length === 0 ? (
-          <p className="text-muted-foreground">No batches available at the moment.</p>
+          <div className="col-span-full py-12 text-center border rounded-xl border-dashed">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">You aren't enrolled in any batches yet.</h3>
+            <p className="text-slate-500 mb-6">Head over to the store to find the perfect course for you.</p>
+            <Link href="/dashboard/store">
+              <Button>Browse Store</Button>
+            </Link>
+          </div>
         ) : (
           batches.map((batch) => (
             <Card key={batch.id}>
@@ -43,7 +54,7 @@ export default function MyBatchesPage() {
                 </div>
                 <CardTitle className="text-xl">{batch.title}</CardTitle>
                 <CardDescription>
-                  Price: ${batch.price}
+                  Enrolled
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -56,7 +67,7 @@ export default function MyBatchesPage() {
               </CardContent>
               <CardFooter>
                 <Link href={`/dashboard/batches/${batch.id}`} className="w-full">
-                  <Button className="w-full">View Details</Button>
+                  <Button className="w-full">Go to Classroom</Button>
                 </Link>
               </CardFooter>
             </Card>

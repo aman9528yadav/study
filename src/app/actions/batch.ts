@@ -19,6 +19,26 @@ export async function getBatches() {
   }
 }
 
+import { getUserSession } from "@/app/actions/auth"
+
+export async function getMyBatches() {
+  try {
+    const user = await getUserSession()
+    if (!user) return { success: false, error: "Not logged in" }
+    
+    const enrollments = await prisma.enrollment.findMany({
+      where: { userId: user.id, status: "APPROVED" },
+      include: { batch: true },
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    const batches = enrollments.map(e => e.batch)
+    return { success: true, data: batches }
+  } catch (error) {
+    return { success: false, error: "Failed to fetch my batches" }
+  }
+}
+
 export async function createBatch(formData: FormData) {
   try {
     const title = formData.get("title") as string

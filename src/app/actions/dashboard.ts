@@ -42,10 +42,13 @@ export async function getStudentDashboardData() {
     const enrolledBatchesCount = user.enrollments.length
     const batchIds = user.enrollments.map(e => e.batchId)
 
-    // Fetch videos for these batches using a separate, safer query
-    const videos = await prisma.video.findMany({
+    const now = new Date()
+
+    // Fetch upcoming scheduled videos
+    const upcomingVideosData = await prisma.video.findMany({
       where: {
         isPublished: true,
+        scheduledAt: { gt: now },
         chapter: {
           subject: {
             batchId: { in: batchIds }
@@ -63,15 +66,43 @@ export async function getStudentDashboardData() {
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { scheduledAt: 'asc' }
     })
 
-    const recentClassesCount = videos.length
+    const recentVideosData = await prisma.video.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { scheduledAt: null },
+          { scheduledAt: { lte: now } }
+        ],
+        chapter: {
+          subject: {
+            batchId: { in: batchIds }
+          }
+        }
+      },
+      include: {
+        chapter: {
+          include: {
+            subject: {
+              include: {
+                batch: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    })
+
+    const recentClassesCount = recentVideosData.length
     
     // Format the latest video
     let latestVideo = null
-    if (videos.length > 0) {
-      const v = videos[0]
+    if (recentVideosData.length > 0) {
+      const v = recentVideosData[0]
       latestVideo = {
         ...v,
         batchName: v.chapter.subject.batch.title,
@@ -83,7 +114,7 @@ export async function getStudentDashboardData() {
     const upcomingTests = 0
     const averageScore = "N/A"
 
-    const recentVideos = videos.map(v => ({
+    const mapVideo = (v: any) => ({
       id: v.id,
       title: v.title,
       description: v.description,
@@ -91,11 +122,15 @@ export async function getStudentDashboardData() {
       videoUrl: v.videoUrl,
       duration: v.duration,
       createdAt: v.createdAt,
+      scheduledAt: v.scheduledAt,
       batchId: v.chapter.subject.batch.id,
       batchName: v.chapter.subject.batch.title,
       chapterName: v.chapter.name,
       subjectName: v.chapter.subject.name
-    }))
+    })
+
+    const recentVideos = recentVideosData.map(mapVideo)
+    const upcomingVideos = upcomingVideosData.map(mapVideo)
 
     // Map the enrolled batches list for display
     const enrolledBatchesList = user.enrollments.map(e => e.batch)
@@ -109,6 +144,7 @@ export async function getStudentDashboardData() {
         averageScore,
         latestVideo,
         recentVideos,
+        upcomingVideos,
         enrolledBatchesList,
         userName: user.name
       }

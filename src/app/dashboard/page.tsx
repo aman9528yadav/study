@@ -48,7 +48,7 @@ export default function DashboardPage() {
   }
 
   const selectedBatch = data.enrolledBatchesList.find((b: any) => b.id === selectedBatchId)
-  const batchVideos = data.recentVideos?.filter((v: any) => v.batchId === selectedBatchId) || []
+  const batchVideos = data.upcomingVideos?.filter((v: any) => v.batchId === selectedBatchId) || []
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 -m-6 sm:-m-8 pb-12">
