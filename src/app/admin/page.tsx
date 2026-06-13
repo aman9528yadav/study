@@ -13,7 +13,7 @@ export default async function AdminPage() {
     prisma.user.count({ where: { role: 'STUDENT' } }),
     prisma.batch.count(),
     prisma.video.count(),
-    prisma.pdf.count(),
+    prisma.pDF.count(),
     prisma.enrollment.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
