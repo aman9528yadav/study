@@ -48,6 +48,11 @@ model Batch {
   startDate    DateTime
   endDate      DateTime
   visibility   String   @default("PUBLIC") // PUBLIC, PRIVATE
+  validity     String?
+  mode         String?
+  schedule     String?
+  features     String   @default("[]") // JSON array of feature strings
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

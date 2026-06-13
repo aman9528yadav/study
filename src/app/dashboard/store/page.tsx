@@ -94,11 +94,16 @@ export default async function StorePage() {
                       Pending
                     </div>
                   ) : (
-                    <form action={enrollInBatch.bind(null, batch.id)}>
-                      <Button type="submit" className="bg-[#1c2438] hover:bg-slate-800 text-white font-bold rounded-xl px-6 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5">
-                        Buy Now
-                      </Button>
-                    </form>
+                    <div className="flex items-center gap-2">
+                      <a href={`/dashboard/store/${batch.id}`} className="px-4 py-2 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold text-sm transition-colors">
+                        Details
+                      </a>
+                      <form action={enrollInBatch.bind(null, batch.id)}>
+                        <Button type="submit" className="bg-[#1c2438] hover:bg-slate-800 text-white font-bold rounded-xl px-4 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5">
+                          Buy Now
+                        </Button>
+                      </form>
+                    </div>
                   )}
                 </div>
               </CardContent>

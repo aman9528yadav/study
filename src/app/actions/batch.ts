@@ -26,6 +26,13 @@ export async function createBatch(formData: FormData) {
     const priceStr = formData.get("price") as string
     const startDateStr = formData.get("startDate") as string
     const endDateStr = formData.get("endDate") as string
+    const validity = formData.get("validity") as string || null
+    const mode = formData.get("mode") as string || null
+    const schedule = formData.get("schedule") as string || null
+    const featuresRaw = formData.get("features") as string || ""
+    
+    // Parse features from newline separated string to JSON array
+    const features = JSON.stringify(featuresRaw.split("\n").map(f => f.trim()).filter(f => f.length > 0))
 
     if (!title || !priceStr || !startDateStr || !endDateStr) {
       return { success: false, error: "Missing required fields" }
@@ -38,7 +45,11 @@ export async function createBatch(formData: FormData) {
         price: parseFloat(priceStr),
         startDate: new Date(startDateStr),
         endDate: new Date(endDateStr),
-        visibility: "PUBLIC"
+        visibility: "PUBLIC",
+        validity,
+        mode,
+        schedule,
+        features
       }
     })
 

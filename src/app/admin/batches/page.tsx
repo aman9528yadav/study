@@ -89,6 +89,30 @@ export default function BatchesManagerPage() {
               <Input id="endDate" name="endDate" type="date" required />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="validity">Validity</Label>
+              <Input id="validity" name="validity" placeholder="e.g. 30 June 2027" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mode">Mode of Lectures</Label>
+              <Input id="mode" name="mode" placeholder="e.g. Live Online" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schedule">Schedule</Label>
+            <Input id="schedule" name="schedule" placeholder="e.g. 3 Classes/Per day, 6 days/week" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="features">Key Features (One per line)</Label>
+            <textarea 
+              id="features" 
+              name="features" 
+              rows={3}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Exam guidance at centers&#10;One-to-one emotional support&#10;In-person helpdesk" 
+            />
+          </div>
           <div className="pt-4 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={submitting}>
