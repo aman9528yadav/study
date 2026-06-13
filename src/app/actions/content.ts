@@ -17,6 +17,7 @@ export async function getBatchContent(batchId: string, includeHidden = false) {
                 videos: {
                   where: includeHidden ? undefined : { isPublished: true },
                   orderBy: { order: 'asc' },
+                  include: { pdfs: true }
                 },
                 pdfs: { orderBy: { order: 'asc' } },
                 tests: true
@@ -119,15 +120,19 @@ export async function createVideo(formData: FormData) {
     const videoUrl = formData.get("videoUrl") as string
     const scheduledAtStr = formData.get("scheduledAt") as string
     const isPublishedStr = formData.get("isPublished") as string
+    const durationMins = parseInt(formData.get("duration") as string)
+
+    const videoType = formData.get("videoType") as string || "RECORDED"
 
     const isPublished = isPublishedStr !== "false"
     const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null
+    const duration = !isNaN(durationMins) ? durationMins * 60 : null
 
     // For published videos, require a source. Scheduled ones can be created without a link yet.
     if (!chapterId || !title) {
       return { success: false, error: "Missing required fields" }
     }
-    if (isPublished && !youtubeId && !videoUrl) {
+    if (isPublished && !youtubeId && !videoUrl && videoType !== "LIVE") {
       return { success: false, error: "Please provide a YouTube ID or Video URL" }
     }
 
@@ -140,6 +145,8 @@ export async function createVideo(formData: FormData) {
         videoUrl: videoUrl || null,
         scheduledAt,
         isPublished,
+        videoType,
+        duration,
       }
     })
     
@@ -168,9 +175,12 @@ export async function updateVideo(id: string, formData: FormData) {
     const batchId = formData.get("batchId") as string
     const scheduledAtStr = formData.get("scheduledAt") as string
     const isPublishedStr = formData.get("isPublished") as string
+    const durationMins = parseInt(formData.get("duration") as string)
+    const videoType = formData.get("videoType") as string || "RECORDED"
 
     const isPublished = isPublishedStr !== "false"
     const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null
+    const duration = !isNaN(durationMins) ? durationMins * 60 : null
 
     await prisma.video.update({
       where: { id },
@@ -181,6 +191,8 @@ export async function updateVideo(id: string, formData: FormData) {
         videoUrl: videoUrl || null,
         scheduledAt,
         isPublished,
+        videoType,
+        duration,
       }
     })
     
@@ -222,6 +234,7 @@ export async function createPDF(formData: FormData) {
     const title = formData.get("title") as string
     const type = formData.get("type") as string // "NOTE" or "DPP"
     const url = formData.get("url") as string
+    const videoId = formData.get("videoId") as string || null
 
     if (!chapterId || !title || !url || !type) {
       return { success: false, error: "Missing required fields" }
@@ -233,6 +246,7 @@ export async function createPDF(formData: FormData) {
         title,
         type,
         url,
+        videoId,
       }
     })
     
@@ -258,6 +272,7 @@ export async function updatePDF(id: string, formData: FormData) {
     const type = formData.get("type") as string // "NOTE" or "DPP"
     const url = formData.get("url") as string
     const batchId = formData.get("batchId") as string
+    const videoId = formData.get("videoId") as string || null
 
     await prisma.pDF.update({
       where: { id },
@@ -265,6 +280,7 @@ export async function updatePDF(id: string, formData: FormData) {
         title,
         type,
         url,
+        videoId,
       }
     })
     

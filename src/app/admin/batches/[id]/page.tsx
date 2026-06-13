@@ -38,7 +38,7 @@ export default function BatchDetailsPage() {
   const [addChapterSubjectId, setAddChapterSubjectId] = useState("")
   const [resourceModal, setResourceModal] = useState<{ isOpen: boolean; type: "VIDEO" | "NOTE" | "DPP" }>({ isOpen: false, type: "VIDEO" })
   const [sourceType, setSourceType] = useState<"LINK" | "UPLOAD">("LINK")
-  const [isVideoScheduled, setIsVideoScheduled] = useState(false)
+  const [videoUploadMode, setVideoUploadMode] = useState<"NORMAL" | "SCHEDULED" | "LIVE">("NORMAL")
 
   // Edit / delete modals
   const [editingSubject, setEditingSubject] = useState<any>(null)
@@ -104,8 +104,8 @@ export default function BatchDetailsPage() {
     formData.append("chapterId", selectedChapterId!)
     formData.append("type", resourceModal.type)
 
-    // For scheduled videos without a file, skip upload check
-    const isScheduledVideo = resourceModal.type === "VIDEO" && isVideoScheduled
+    // For scheduled/live videos without a file, skip upload check
+    const isScheduledVideo = resourceModal.type === "VIDEO" && (videoUploadMode === "SCHEDULED" || videoUploadMode === "LIVE")
 
     if (sourceType === "UPLOAD" && !isScheduledVideo) {
       const file = formData.get("file") as File
@@ -128,10 +128,19 @@ export default function BatchDetailsPage() {
       }
     }
 
+    if (resourceModal.type === "VIDEO") {
+      formData.append("videoType", videoUploadMode === "LIVE" ? "LIVE" : "RECORDED")
+      if (videoUploadMode === "SCHEDULED" || videoUploadMode === "LIVE") {
+        formData.set("isPublished", "false") // Keep hidden until live/scheduled
+      } else {
+        formData.set("isPublished", "true")
+      }
+    }
+
     const res = resourceModal.type === "VIDEO" ? await createVideo(formData) : await createPDF(formData)
     if (res.success) {
       setResourceModal({ ...resourceModal, isOpen: false })
-      setIsVideoScheduled(false)
+      setVideoUploadMode("NORMAL")
       fetchContent()
     } else {
       alert("Error: " + (res.error || "Failed to create resource"))
@@ -309,11 +318,14 @@ export default function BatchDetailsPage() {
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {selectedChapter.videos.map((video: any) => {
                           const isActive = video.isPublished !== false
+                          const isUpcoming = !isActive && video.scheduledAt && new Date(video.scheduledAt) > new Date()
+                          const isLive = video.videoType === "LIVE"
+                          
                           return (
                           <div key={video.id} className={`flex gap-3 p-3 border rounded-lg hover:shadow-sm transition-shadow bg-card relative overflow-hidden`}>
                             {/* Status strip on left edge */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${
-                              isActive ? "bg-green-500" : "bg-amber-400"
+                              isActive ? "bg-green-500" : isUpcoming ? "bg-amber-400" : "bg-slate-400"
                             }`} />
                             <div className="w-20 h-14 bg-muted rounded-md overflow-hidden shrink-0 flex items-center justify-center relative ml-1">
                               {video.youtubeId ? (
@@ -323,7 +335,7 @@ export default function BatchDetailsPage() {
                               )}
                               {!isActive && (
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                  <Clock className="w-4 h-4 text-amber-300" />
+                                  {isUpcoming ? <Clock className="w-4 h-4 text-amber-300" /> : <EyeOff className="w-4 h-4 text-slate-300" />}
                                 </div>
                               )}
                             </div>
@@ -332,10 +344,15 @@ export default function BatchDetailsPage() {
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
                                   isActive
                                     ? "bg-green-100 text-green-700"
-                                    : "bg-amber-100 text-amber-700"
+                                    : isUpcoming ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
                                 }`}>
-                                  {isActive ? "● ACTIVE" : "◐ UPCOMING"}
+                                  {isActive ? "● ACTIVE" : isUpcoming ? "◐ UPCOMING" : "⊘ INACTIVE"}
                                 </span>
+                                {isLive && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 bg-red-100 text-red-700">
+                                    LIVE
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm font-medium line-clamp-1">{video.title}</p>
                               {video.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{video.description}</p>}
@@ -591,7 +608,7 @@ export default function BatchDetailsPage() {
                     defaultChecked={editingVideo?.isPublished === false}
                     className="accent-amber-500"
                   />
-                  <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Upcoming</span>
+                  <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">Inactive</span>
                 </label>
               </div>
             </div>
@@ -612,10 +629,27 @@ export default function BatchDetailsPage() {
               <Label htmlFor="editVideoUrl">Video URL</Label>
               <Input id="editVideoUrl" name="videoUrl" defaultValue={editingVideo?.videoUrl} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="editDuration">Duration (in minutes)</Label>
+              <Input id="editDuration" name="duration" type="number" min="0" placeholder="e.g. 120" defaultValue={editingVideo?.duration ? Math.round(editingVideo.duration / 60) : ""} />
+            </div>
 
             {/* Schedule section */}
             <div className="space-y-2 border rounded-lg p-3 bg-amber-50/50 border-amber-200">
-              <Label htmlFor="editScheduledAt" className="text-amber-800 flex items-center gap-1.5">
+              <Label htmlFor="editVideoType" className="text-amber-800 flex items-center gap-1.5">
+                Video Type
+              </Label>
+              <select 
+                id="editVideoType" 
+                name="videoType" 
+                defaultValue={editingVideo?.videoType || "RECORDED"}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm border-amber-300 focus-visible:ring-amber-400"
+              >
+                <option value="RECORDED">Recorded</option>
+                <option value="LIVE">Live Stream</option>
+              </select>
+
+              <Label htmlFor="editScheduledAt" className="text-amber-800 flex items-center gap-1.5 mt-3">
                 <Clock className="w-3.5 h-3.5" /> Scheduled Date &amp; Time
                 <span className="text-xs text-muted-foreground font-normal ml-1">(leave blank to unschedule)</span>
               </Label>
@@ -624,7 +658,7 @@ export default function BatchDetailsPage() {
                 name="scheduledAt"
                 type="datetime-local"
                 defaultValue={editingVideo?.scheduledAt
-                  ? new Date(editingVideo.scheduledAt).toISOString().slice(0, 16)
+                  ? new Date(new Date(editingVideo.scheduledAt).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16)
                   : ""}
                 className="border-amber-300 focus-visible:ring-amber-400"
               />
@@ -678,6 +712,15 @@ export default function BatchDetailsPage() {
               <Label htmlFor="pdfUrl">URL</Label>
               <Input id="pdfUrl" name="url" required defaultValue={editingPDF?.url} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="pdfVideoIdEdit">Attach to Lecture (Optional)</Label>
+              <select id="pdfVideoIdEdit" name="videoId" defaultValue={editingPDF?.videoId || ""} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">None (Chapter Level)</option>
+                {selectedChapter?.videos?.map((v: any) => (
+                  <option key={v.id} value={v.id}>{v.title}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditingPDF(null)}>Cancel</Button>
               <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Save"}</Button>
@@ -702,7 +745,7 @@ export default function BatchDetailsPage() {
 
       <Dialog
         isOpen={resourceModal.isOpen}
-        onClose={() => { setResourceModal({ ...resourceModal, isOpen: false }); setIsVideoScheduled(false) }}
+        onClose={() => { setResourceModal({ ...resourceModal, isOpen: false }); setVideoUploadMode("NORMAL") }}
         title={`Add ${resourceModal.type === "VIDEO" ? "Video Lecture" : resourceModal.type === "NOTE" ? "Class Note" : "Daily Practice Problem"}`}
       >
         <div className="max-h-[80vh] overflow-y-auto p-4">
@@ -729,15 +772,15 @@ export default function BatchDetailsPage() {
             {sourceType === "LINK" ? (
               <div className="space-y-2">
                 <Label htmlFor="resLink">
-                  {resourceModal.type === "VIDEO" ? "YouTube ID" : "External URL"}
-                  {resourceModal.type === "VIDEO" && isVideoScheduled && (
-                    <span className="ml-1 text-xs text-amber-600 font-normal">(optional for scheduled)</span>
+                  {resourceModal.type === "VIDEO" ? "YouTube ID or URL" : "External URL"}
+                  {resourceModal.type === "VIDEO" && videoUploadMode !== "NORMAL" && (
+                    <span className="ml-1 text-xs text-amber-600 font-normal">(optional for scheduled/live)</span>
                   )}
                 </Label>
                 <Input
                   id="resLink"
                   name={resourceModal.type === "VIDEO" ? "youtubeId" : "url"}
-                  required={!(resourceModal.type === "VIDEO" && isVideoScheduled)}
+                  required={!(resourceModal.type === "VIDEO" && videoUploadMode !== "NORMAL")}
                   placeholder={resourceModal.type === "VIDEO" ? "e.g. dQw4w9WgXcQ" : "https://example.com/file.pdf"}
                 />
               </div>
@@ -745,14 +788,33 @@ export default function BatchDetailsPage() {
               <div className="space-y-2">
                 <Label htmlFor="resFile">
                   Select File
-                  {resourceModal.type === "VIDEO" && isVideoScheduled && (
-                    <span className="ml-1 text-xs text-amber-600 font-normal">(optional for scheduled)</span>
+                  {resourceModal.type === "VIDEO" && videoUploadMode !== "NORMAL" && (
+                    <span className="ml-1 text-xs text-amber-600 font-normal">(optional for scheduled/live)</span>
                   )}
                 </Label>
                 <Input id="resFile" name="file" type="file"
-                  required={!(resourceModal.type === "VIDEO" && isVideoScheduled)}
+                  required={!(resourceModal.type === "VIDEO" && videoUploadMode !== "NORMAL")}
                   accept={resourceModal.type === "VIDEO" ? "video/mp4,video/webm" : "application/pdf"}
                   className="cursor-pointer" />
+              </div>
+            )}
+            
+            {resourceModal.type !== "VIDEO" && selectedChapter && (
+              <div className="space-y-2">
+                <Label htmlFor="pdfVideoId">Attach to Lecture (Optional)</Label>
+                <select id="pdfVideoId" name="videoId" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="">None (Chapter Level)</option>
+                  {selectedChapter.videos?.map((v: any) => (
+                    <option key={v.id} value={v.id}>{v.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {resourceModal.type === "VIDEO" && (
+              <div className="space-y-2">
+                <Label htmlFor="resDuration">Duration (in minutes)</Label>
+                <Input id="resDuration" name="duration" type="number" min="0" placeholder="e.g. 120" />
               </div>
             )}
 
@@ -766,37 +828,36 @@ export default function BatchDetailsPage() {
             {/* ── Schedule Section (Videos only) ── */}
             {resourceModal.type === "VIDEO" && (
               <div className="border rounded-lg p-3 space-y-3 bg-amber-50/50 border-amber-200">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="scheduleToggle"
-                    className="w-4 h-4 rounded accent-amber-500"
-                    checked={isVideoScheduled}
-                    onChange={e => setIsVideoScheduled(e.target.checked)}
-                  />
-                  <span className="text-sm font-medium text-amber-800 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    Schedule as Upcoming Lecture
-                  </span>
-                </label>
-                {isVideoScheduled && (
-                  <div className="space-y-2 pt-1">
+                <Label htmlFor="videoUploadMode" className="text-amber-800">Upload Mode</Label>
+                <select
+                  id="videoUploadMode"
+                  value={videoUploadMode}
+                  onChange={(e) => setVideoUploadMode(e.target.value as any)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-amber-400 border-amber-300"
+                >
+                  <option value="NORMAL">Normal (Direct Add)</option>
+                  <option value="SCHEDULED">Schedule as Upcoming</option>
+                  <option value="LIVE">Live Stream</option>
+                </select>
+
+                {videoUploadMode !== "NORMAL" && (
+                  <div className="space-y-2 pt-1 border-t border-amber-200/50 mt-2">
                     <Label htmlFor="scheduledAt" className="text-xs text-amber-700">Scheduled Date &amp; Time</Label>
                     <Input
                       id="scheduledAt"
                       name="scheduledAt"
                       type="datetime-local"
+                      required
                       className="border-amber-300 focus-visible:ring-amber-400"
                     />
-                    <input type="hidden" name="isPublished" value="false" />
-                    <p className="text-xs text-amber-600">Students will see this as &quot;Upcoming&quot; until you mark it live.</p>
+                    <p className="text-xs text-amber-600">Students will see this as &quot;Upcoming&quot; until it goes live.</p>
                   </div>
                 )}
               </div>
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => { setResourceModal({ ...resourceModal, isOpen: false }); setIsVideoScheduled(false) }}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { setResourceModal({ ...resourceModal, isOpen: false }); setVideoUploadMode("NORMAL") }}>Cancel</Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Processing..." : `Add ${resourceModal.type}`}
               </Button>

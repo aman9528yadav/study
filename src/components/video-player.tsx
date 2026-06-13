@@ -5,7 +5,7 @@ import YouTube, { YouTubeProps, YouTubePlayer } from "react-youtube"
 import { Play, Pause, Maximize, Settings } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 
-export function VideoPlayer({ videoId }: { videoId: string }) {
+export function VideoPlayer({ videoId, isLive = false }: { videoId: string, isLive?: boolean }) {
   const [userEmail, setUserEmail] = useState<string>("student@example.com")
   const supabase = createClient()
 
@@ -94,6 +94,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
   }
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLive) return // Disallow seeking for live videos
     const newProgress = parseFloat(e.target.value)
     if (player && duration > 0) {
       const seekTime = (newProgress / 100) * duration
@@ -223,17 +224,19 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
         className={`absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
         {/* Progress Bar */}
-        <div className="relative w-full h-1.5 bg-white/30 rounded-full mb-4 cursor-pointer group-hover:h-2 transition-all">
-          <input 
-            type="range" 
-            min="0" 
-            max="100" 
-            value={progress} 
-            onChange={handleSeek}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
-          />
+        <div className={`relative w-full h-1.5 bg-white/30 rounded-full mb-4 ${!isLive ? "cursor-pointer group-hover:h-2" : "cursor-not-allowed"} transition-all`}>
+          {!isLive && (
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              value={progress} 
+              onChange={handleSeek}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-40"
+            />
+          )}
           <div 
-            className="absolute top-0 left-0 h-full bg-indigo-500 rounded-full z-30"
+            className={`absolute top-0 left-0 h-full ${isLive ? "bg-red-500" : "bg-indigo-500"} rounded-full z-30`}
             style={{ width: `${progress}%` }}
           />
         </div>

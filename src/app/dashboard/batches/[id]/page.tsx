@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useParams } from "next/navigation"
-import { Play, Lock, ChevronRight, ChevronLeft, Calendar, FileText, CheckCircle2, ChevronDown, Bell, Search } from "lucide-react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { Play, Lock, ChevronRight, ChevronLeft, Calendar, FileText, CheckCircle2, ChevronDown, Bell, Search, Menu, Video } from "lucide-react"
 import { getBatchContent } from "@/app/actions/content"
 import { checkEnrollment, enrollInBatch } from "@/app/actions/enrollment"
 import { VideoPlayer } from "@/components/video-player"
 import Link from "next/link"
-import { getTimeUntil } from "@/lib/utils"
 
 // Helper to get youtube thumbnail
 const getYoutubeThumbnail = (urlOrId: string) => {
@@ -20,8 +19,11 @@ const getYoutubeThumbnail = (urlOrId: string) => {
 }
 
 export default function StudentClassroomPage() {
-  const params = useParams()
-  const batchId = params.id as string
+  const { id } = useParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const playVideoId = searchParams.get('play')
+  const batchId = id as string
 
   const [batch, setBatch] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -31,13 +33,26 @@ export default function StudentClassroomPage() {
   const [enrolling, setEnrolling] = useState(false)
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState("all-classes")
   const [activeSubject, setActiveSubject] = useState<any>(null)
   const [activeChapter, setActiveChapter] = useState<any>(null)
-  const [chapterTab, setChapterTab] = useState("lectures")
+  const [chapterTab, setChapterTab] = useState("all") // all, lectures, dpps, notes
   
   const [activeVideo, setActiveVideo] = useState<any>(null)
+  const [attachmentsModal, setAttachmentsModal] = useState<any>(null)
+  const [completedItems, setCompletedItems] = useState<string[]>([])
   const topRef = useRef<HTMLDivElement>(null)
+
+  const handleBack = () => {
+    if (activeVideo) {
+      setActiveVideo(null)
+    } else if (activeChapter) {
+      setActiveChapter(null)
+    } else if (activeSubject) {
+      setActiveSubject(null)
+    } else {
+      router.push("/dashboard/batches")
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -60,7 +75,47 @@ export default function StudentClassroomPage() {
 
   useEffect(() => {
     fetchData()
+    const stored = localStorage.getItem("completed_items")
+    if (stored) {
+      try { setCompletedItems(JSON.parse(stored)) } catch (e) {}
+    }
   }, [batchId])
+
+  useEffect(() => {
+    if (batch && isEnrolled && playVideoId && !activeVideo) {
+      let foundVideo = null
+      let foundChapter = null
+      let foundSubject = null
+      
+      batch.subjects?.forEach((sub: any) => {
+        sub.chapters?.forEach((ch: any) => {
+          ch.videos?.forEach((vid: any) => {
+            if (vid.id === playVideoId) {
+              foundVideo = vid
+              foundChapter = ch
+              foundSubject = sub
+            }
+          })
+        })
+      })
+      
+      if (foundVideo) {
+        setActiveSubject(foundSubject)
+        setActiveChapter(foundChapter)
+        setActiveVideo(foundVideo)
+      }
+    }
+  }, [batch, isEnrolled, playVideoId])
+
+  const toggleComplete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setCompletedItems(prev => {
+      const next = prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      localStorage.setItem("completed_items", JSON.stringify(next))
+      return next
+    })
+  }
 
   const handleEnroll = async () => {
     setEnrolling(true)
@@ -80,438 +135,455 @@ export default function StudentClassroomPage() {
       return
     }
     setActiveVideo(video)
-    topRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // --- Rendering Helpers ---
-
-  // Top Tabs
-  const renderTabs = () => (
-    <div className="flex overflow-x-auto border-b border-[#2a344a] mb-6 scrollbar-hide">
-      {["All Classes", "Khazana", "Tests", "Announcements"].map((tab) => {
-        const id = tab.toLowerCase().replace(" ", "-")
-        return (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap relative
-              ${activeTab === id ? "text-indigo-400" : "text-slate-400 hover:text-slate-300"}
-            `}
-          >
-            {tab}
-            {activeTab === id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-
-  // Level 1: Subjects List
-  const renderSubjectsList = () => {
-    if (!batch.subjects || batch.subjects.length === 0) {
-      return <div className="p-8 text-center text-slate-500">No subjects available.</div>
-    }
-
-    return (
-      <div className="space-y-3">
-        {batch.subjects.map((subject: any) => {
-          const chapterCount = subject.chapters?.length || 0
-          return (
-            <button
-              key={subject.id}
-              onClick={() => setActiveSubject(subject)}
-              className="w-full flex items-center justify-between p-4 bg-[#1c2438] hover:bg-[#252f48] border border-[#2a344a] rounded-xl transition-all group text-left"
-            >
-              <div>
-                <h3 className="text-lg font-semibold text-slate-100">{subject.name}</h3>
-                <p className="text-sm text-slate-400 mt-1">{chapterCount} Chapters</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-            </button>
-          )
-        })}
-      </div>
-    )
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return "";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
   }
-
-  // Level 2: Chapters List (Inside a Subject)
-  const renderChaptersList = () => {
-    if (!activeSubject.chapters || activeSubject.chapters.length === 0) {
-      return <div className="p-8 text-center text-slate-500">No chapters available in this subject.</div>
-    }
-
-    return (
-      <div className="space-y-3">
-        {activeSubject.chapters.map((chapter: any) => {
-          const videoCount = chapter.videos?.length || 0
-          return (
-            <button
-              key={chapter.id}
-              onClick={() => setActiveChapter(chapter)}
-              className="w-full flex items-center justify-between p-4 bg-[#1c2438] hover:bg-[#252f48] border border-[#2a344a] rounded-xl transition-all group text-left"
-            >
-              <div>
-                <h3 className="text-base font-semibold text-slate-100">{chapter.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  {videoCount} Videos | 0 Exercises | 0 Notes
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-            </button>
-          )
-        })}
-      </div>
-    )
-  }
-
-  // Level 3: Videos List (Inside a Chapter)
-  const renderVideosList = () => {
-    return (
-      <div className="mt-4">
-        {/* Chapter Tabs */}
-        <div className="flex overflow-x-auto border-b border-[#2a344a] mb-4 scrollbar-hide">
-          {["Lectures", "Notes", "DPP", "DPP PDF", "DPP Videos"].map((tab) => {
-            const id = tab.toLowerCase().replace(" ", "-")
-            return (
-              <button
-                key={id}
-                onClick={() => setChapterTab(id)}
-                className={`px-8 py-3 text-sm font-medium transition-colors whitespace-nowrap
-                  ${chapterTab === id ? "text-indigo-400 border-b-2 border-indigo-500" : "text-slate-400 hover:text-slate-300"}
-                `}
-              >
-                {tab}
-              </button>
-            )
-          })}
-        </div>
-
-        {chapterTab === "lectures" && (
-          !activeChapter.videos || activeChapter.videos.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">No lectures uploaded yet.</div>
-          ) : (
-            <div className="space-y-3">
-              {activeChapter.videos.map((video: any) => {
-                const isActive = activeVideo?.id === video.id
-                const isUpcoming = video.scheduledAt && new Date(video.scheduledAt) > new Date()
-                const canPlay = isEnrolled && !isUpcoming
-                return (
-                  <button
-                    key={video.id}
-                    disabled={!canPlay}
-                    onClick={() => handlePlayVideo(video)}
-                    className={`w-full flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 bg-[#1c2438] hover:bg-[#252f48] border rounded-xl transition-all text-left
-                      ${isActive ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : "border-[#2a344a]"}
-                      ${!canPlay ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
-                    `}
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative w-full sm:w-48 aspect-video rounded-lg overflow-hidden shrink-0 bg-black">
-                      {getYoutubeThumbnail(video.youtubeId || video.videoUrl) ? (
-                        <img 
-                          src={getYoutubeThumbnail(video.youtubeId || video.videoUrl)!} 
-                          alt="Thumbnail"
-                          className="w-full h-full object-cover opacity-80"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500">
-                          <Play className="w-8 h-8 mb-2 opacity-50" />
-                          <span className="text-[10px] font-medium tracking-widest uppercase">Direct Stream</span>
-                        </div>
-                      )}
-                      
-                      {!canPlay && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                          {isUpcoming ? (
-                            <div className="flex flex-col items-center">
-                              <Calendar className="w-6 h-6 text-white/80 mb-1" />
-                              <span className="text-white/80 text-[10px] font-bold text-center leading-tight">
-                                UPCOMING<br/>
-                                <span className="text-indigo-300">{getTimeUntil(video.scheduledAt) ? `Starts ${getTimeUntil(video.scheduledAt)}` : ''}</span>
-                              </span>
-                            </div>
-                          ) : (
-                            <Lock className="w-8 h-8 text-white/80" />
-                          )}
-                        </div>
-                      )}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                          <div className="bg-indigo-600 text-white text-xs px-2 py-1 rounded shadow-lg animate-pulse">Playing</div>
-                        </div>
-                      )}
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] text-white font-mono">
-                        02:00:00
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0 pr-4">
-                      <h4 className={`text-sm sm:text-base font-semibold leading-tight mb-2 line-clamp-2
-                        ${isActive ? "text-indigo-400" : "text-slate-100"}
-                      `}>
-                        {video.title}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Play className="w-3.5 h-3.5" /> Lecture
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" /> {new Date(video.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2 line-clamp-1">{video.description}</p>
-                    </div>
-
-                    {/* Status */}
-                    <div className="hidden sm:flex items-center justify-center pr-2 shrink-0">
-                      <CheckCircle2 className="w-6 h-6 text-slate-600" />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )
-        )}
-
-        {(chapterTab === "notes" || chapterTab === "dpp") && (() => {
-          const expectedType = chapterTab === "notes" ? "NOTE" : "DPP"
-          const pdfs = activeChapter.pdfs?.filter((p: any) => p.type === expectedType) || []
-          
-          if (pdfs.length === 0) {
-            return <div className="p-8 text-center text-slate-500">No {expectedType.toLowerCase()}s uploaded yet.</div>
-          }
-
-          return (
-            <div className="space-y-3">
-              {pdfs.map((pdf: any) => (
-                <a
-                  key={pdf.id}
-                  href={isEnrolled ? pdf.url : "#"}
-                  target={isEnrolled ? "_blank" : undefined}
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    if (!isEnrolled) {
-                      e.preventDefault()
-                      alert("Please enroll to view this document.")
-                    }
-                  }}
-                  className={`w-full flex items-center gap-4 p-4 bg-[#1c2438] hover:bg-[#252f48] border rounded-xl transition-all text-left border-[#2a344a]
-                    ${!isEnrolled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
-                  `}
-                >
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0
-                    ${pdf.type === "DPP" ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"}
-                  `}>
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-semibold text-slate-100 line-clamp-1">{pdf.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                      <Calendar className="w-3 h-3" /> {new Date(pdf.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  <div className="shrink-0 pl-4">
-                    {!isEnrolled ? <Lock className="w-5 h-5 text-slate-600" /> : <ChevronRight className="w-5 h-5 text-slate-500" />}
-                  </div>
-                </a>
-              ))}
-            </div>
-          )
-        })()}
-
-        {(chapterTab === "dpp-pdf" || chapterTab === "dpp-videos") && (
-          <div className="p-12 text-center text-slate-500 flex flex-col items-center">
-            <FileText className="w-12 h-12 mb-4 opacity-20" />
-            <p>Content for {chapterTab.toUpperCase()} is coming soon.</p>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // --- Main Layout ---
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0b1121] flex items-center justify-center text-slate-400">
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center text-gray-500">
         <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
           Loading Classroom...
         </div>
       </div>
     )
   }
 
-  if (!batch) return <div className="min-h-screen bg-[#0b1121] p-8 text-center text-red-400">Batch not found.</div>
+  if (!batch) return <div className="min-h-screen bg-[#f8f9fa] p-8 text-center text-red-500">Batch not found.</div>
+
+  // --- Render Layouts ---
 
   return (
-    // Force PW Dark Theme explicitly across the whole page container
-    <div className="min-h-screen bg-[#0b1121] text-slate-200 font-sans selection:bg-indigo-500/30" ref={topRef}>
+    <div className="min-h-screen bg-[#f4f5f8] text-gray-900 font-sans" ref={topRef}>
       
-      {/* Top Navbar / Header area (Mimicking PW's top nav) */}
-      <div className="sticky top-0 z-40 bg-[#0b1121]/90 backdrop-blur-md border-b border-[#2a344a]">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
-          <Link href="/dashboard/batches" className="p-2 hover:bg-[#1c2438] rounded-full transition-colors">
-            <ChevronLeft className="w-6 h-6 text-slate-300" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-white truncate">
-              {activeChapter ? activeChapter.name : activeSubject ? activeSubject.name : batch.title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-slate-400 hover:text-white transition-colors">
-              <Search className="w-5 h-5" />
-            </button>
-            <button className="p-2 text-slate-400 hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-            </button>
+      {/* Universal Header */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
+          <button onClick={handleBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-[17px] font-semibold text-gray-800 tracking-tight">All Classes</h1>
+          
+          <div className="ml-auto flex items-center gap-4">
+            <div className="relative hidden md:block">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Search for Notes" 
+                className="w-64 pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all" 
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+              <span className="text-[#5a67d8] font-bold text-xs uppercase">XP</span>
+              <span className="font-semibold text-sm">0</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        
-        {/* Anti-Piracy Video Player Section (Only if video is active) */}
-        {isEnrolled && activeVideo && (
-          <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="w-full bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-[#2a344a]">
-              {activeVideo.youtubeId ? (
-                <div className="w-full aspect-video">
-                  <VideoPlayer videoId={activeVideo.youtubeId} />
+      {/* Access Barrier */}
+      {!isEnrolled && (
+        <div className="max-w-3xl mx-auto mt-12 p-8 bg-white border border-gray-200 rounded-2xl shadow-sm text-center">
+          <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10" />
+          </div>
+          
+          {enrollmentStatus === "PENDING" ? (
+            <>
+              <h2 className="text-2xl font-bold text-amber-600 mb-2">Pending Approval</h2>
+              <p className="text-gray-500 mb-8">Your request is waiting for admin approval.</p>
+              <button disabled className="px-8 py-3 bg-amber-100 text-amber-700 font-semibold rounded-lg cursor-not-allowed">
+                Awaiting Approval...
+              </button>
+            </>
+          ) : enrollmentStatus === "REJECTED" ? (
+            <>
+              <h2 className="text-2xl font-bold text-red-600 mb-2">Enrollment Rejected</h2>
+              <p className="text-gray-500 mb-8">Your request to enroll was rejected.</p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Unlock Premium Content</h2>
+              <p className="text-gray-500 mb-8">Get full access to {batch.title} for ${batch.price}.</p>
+              <button 
+                onClick={handleEnroll} 
+                disabled={enrolling}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50"
+              >
+                {enrolling ? "Processing..." : "Request Access"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Main UI Branches */}
+      {isEnrolled && (
+        <>
+          {/* Level 1: Subjects View */}
+          {!activeSubject && (
+            <div className="bg-white min-h-[calc(100vh-64px)]">
+              <div className="border-b border-gray-200">
+                <div className="flex gap-8 max-w-7xl mx-auto px-6">
+                  <button className="py-4 border-b-[3px] border-[#5a67d8] text-[#5a67d8] font-semibold text-sm">Subjects</button>
+                  <button className="py-4 text-gray-500 font-medium text-sm hover:text-gray-800">Resources</button>
                 </div>
-              ) : activeVideo.videoUrl ? (
-                <div className="w-full aspect-video bg-black flex items-center justify-center">
-                  <video 
-                    src={activeVideo.videoUrl} 
-                    controls 
-                    controlsList="nodownload" 
-                    className="w-full h-full"
-                    autoPlay
-                  />
-                </div>
-              ) : (
-                <div className="aspect-video flex items-center justify-center text-slate-600 bg-[#0a0a0a]">
-                  Invalid Video Source
-                </div>
-              )}
-              <div className="p-4 bg-[#141b2d] border-t border-[#2a344a] flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-white">{activeVideo.title}</h2>
-                  <p className="text-sm text-slate-400">{activeSubject?.name} • {activeChapter?.name}</p>
-                </div>
-                <button className="px-4 py-2 bg-[#1c2438] hover:bg-[#252f48] rounded-lg text-sm font-medium transition-colors border border-[#2a344a]">
-                  Mark as Complete
-                </button>
+              </div>
+              <div className="max-w-7xl mx-auto px-6 py-8">
+                {(!batch.subjects || batch.subjects.length === 0) ? (
+                  <p className="text-gray-500">No subjects available.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {batch.subjects.map((subject: any) => (
+                      <button 
+                        key={subject.id} 
+                        onClick={() => setActiveSubject(subject)} 
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300 transition-all text-left"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-[#f0f4ff] text-[#5a67d8] font-bold rounded-[10px] flex items-center justify-center shrink-0">
+                            {subject.name.substring(0, 2).charAt(0).toUpperCase() + subject.name.substring(1, 2).toLowerCase()}
+                          </div>
+                          <h3 className="font-semibold text-gray-800 text-[15px]">{subject.name}</h3>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-end">
+                            {(() => {
+                              let total = 0
+                              let completed = 0
+                              subject.chapters?.forEach((ch: any) => {
+                                total += (ch.videos?.length || 0) + (ch.pdfs?.length || 0)
+                                ch.videos?.forEach((v: any) => { if (completedItems.includes(v.id)) completed++ })
+                                ch.pdfs?.forEach((p: any) => { if (completedItems.includes(p.id)) completed++ })
+                              })
+                              const progress = total === 0 ? 0 : Math.round((completed / total) * 100)
+                              return (
+                                <>
+                                  <span className="text-[11px] font-bold text-gray-500 tracking-wide">{progress} %</span>
+                                  <div className="w-8 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                    <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                                  </div>
+                                </>
+                              )
+                            })()}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-8 flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full border border-gray-400 inline-flex items-center justify-center text-[8px]">i</span> 
+                  Completion % depends on lecture and DPP progress!
+                </p>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Not Enrolled or Pending Barrier */}
-        {!isEnrolled && (
-          <div className="mb-8 p-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl">
-            <div className="bg-[#0b1121] rounded-xl p-8 flex flex-col items-center text-center">
-              <Lock className="w-16 h-16 text-indigo-400 mb-6" />
+          {/* Level 2: Chapters View */}
+          {activeSubject && !activeChapter && (
+            <div className="bg-[#f8f9fa] min-h-[calc(100vh-64px)] pb-12">
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="flex gap-8 max-w-7xl mx-auto px-6">
+                  <button className="py-4 border-b-[3px] border-[#5a67d8] text-[#5a67d8] font-semibold text-sm">Chapters</button>
+                  <button className="py-4 text-gray-500 font-medium text-sm hover:text-gray-800">Study Material</button>
+                </div>
+              </div>
+              <div className="max-w-7xl mx-auto px-6 py-8">
+                {(!activeSubject.chapters || activeSubject.chapters.length === 0) ? (
+                  <p className="text-gray-500">No chapters available.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {activeSubject.chapters.map((chapter: any, i: number) => {
+                      const chNum = String(i + 1).padStart(2, '0')
+                      return (
+                        <button 
+                          key={chapter.id} 
+                          onClick={() => setActiveChapter(chapter)} 
+                          className="flex flex-col p-5 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-blue-200 transition-all text-left"
+                        >
+                          <span className="text-[10px] font-bold text-[#5a67d8] mb-3 uppercase tracking-wider bg-[#f0f4ff] px-2 py-1 rounded">
+                            CH - {chNum}
+                          </span>
+                          <div className="flex justify-between items-center w-full mb-3">
+                            <h3 className="font-semibold text-gray-800 text-[15px] truncate pr-4">
+                              Ch - {chNum} : {chapter.name}
+                            </h3>
+                            <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-medium">
+                            {(() => {
+                              const vidTotal = chapter.videos?.length || 0
+                              const vidCompleted = chapter.videos?.filter((v:any) => completedItems.includes(v.id)).length || 0
+                              const dppTotal = chapter.pdfs?.filter((p:any) => p.type === 'DPP').length || 0
+                              const dppCompleted = chapter.pdfs?.filter((p:any) => p.type === 'DPP' && completedItems.includes(p.id)).length || 0
+                              return `Lecture: ${vidCompleted}/${vidTotal} • DPP: ${dppCompleted}/${dppTotal}`
+                            })()}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Level 3: Split Pane View */}
+          {activeSubject && activeChapter && (
+            <div className="flex bg-white min-h-[calc(100vh-64px)] max-w-[1400px] mx-auto border-x border-gray-200">
               
-              {enrollmentStatus === "PENDING" ? (
-                <>
-                  <h2 className="text-3xl font-bold text-yellow-400 mb-4">Pending Admin Approval</h2>
-                  <p className="text-slate-400 max-w-lg mb-8 text-lg">
-                    Your request to enroll in {batch.title} is currently pending. Please wait for an admin to approve your access.
-                  </p>
-                  <button disabled className="px-12 py-4 bg-yellow-600/50 text-white text-lg font-bold rounded-xl cursor-not-allowed">
-                    Awaiting Approval...
-                  </button>
-                </>
-              ) : enrollmentStatus === "REJECTED" ? (
-                <>
-                  <h2 className="text-3xl font-bold text-red-500 mb-4">Enrollment Rejected</h2>
-                  <p className="text-slate-400 max-w-lg mb-8 text-lg">
-                    Your request to enroll in {batch.title} was rejected by an admin.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-3xl font-bold text-white mb-4">Unlock Premium Content</h2>
-                  <p className="text-slate-400 max-w-lg mb-8 text-lg">
-                    Get full access to live classes, recorded lectures, DPPS, and test series for {batch.title}.
-                  </p>
-                  <button 
-                    onClick={handleEnroll} 
-                    disabled={enrolling}
-                    className="px-12 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {enrolling ? "Processing..." : `Request Access @ $${batch.price}`}
-                  </button>
-                </>
+              {/* Left Sidebar: Chapters List */}
+              <div className="w-72 shrink-0 border-r border-gray-200 bg-gray-50 hidden md:block overflow-y-auto max-h-[calc(100vh-64px)]">
+                <div className="p-4 text-[11px] font-bold text-gray-600 uppercase tracking-widest pt-6 mb-2">
+                  ALL CHAPTERS
+                </div>
+                {activeSubject.chapters.map((chapter: any, i: number) => {
+                  const chNum = String(i + 1).padStart(2, '0')
+                  const isActive = activeChapter.id === chapter.id
+                  return (
+                    <button 
+                      key={chapter.id} 
+                      onClick={() => setActiveChapter(chapter)} 
+                      className={`w-full text-left p-4 flex items-start gap-3 transition-colors mb-1
+                        ${isActive ? 'bg-[#f0f4ff] border-l-4 border-[#5a67d8]' : 'hover:bg-gray-100 border-l-4 border-transparent'}
+                      `}
+                    >
+                      <span className={`text-[11px] font-bold mt-[3px] shrink-0 ${isActive ? 'text-[#5a67d8]' : 'text-gray-500'}`}>
+                        CH - {chNum}
+                      </span>
+                      <span className={`text-[13px] leading-tight ${isActive ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                        Ch - {chNum} : {chapter.name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Right Main Content */}
+              <div className="flex-1 overflow-y-auto max-h-[calc(100vh-64px)] relative">
+                
+                {/* Tabs */}
+                <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-gray-200 px-8 pt-6 pb-0 flex gap-8">
+                  {["All", "Lectures", "DPPs", "Notes", "DPP PDFs", "DPP Videos"].map(t => {
+                    const id = t.toLowerCase().replace(" ", "-")
+                    const isActive = chapterTab === id
+                    return (
+                      <button 
+                        key={id} 
+                        onClick={() => setChapterTab(id)} 
+                        className={`text-[13px] font-medium pb-3 border-b-2 transition-colors
+                          ${isActive ? 'text-[#5a67d8] border-[#5a67d8]' : 'text-gray-500 border-transparent hover:text-gray-800'}
+                        `}
+                      >
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="p-8 pb-32">
+                  {/* List of Content Cards */}
+                  {(() => {
+                    const showLectures = chapterTab === "all" || chapterTab === "lectures"
+                    const showDPPs = chapterTab === "all" || chapterTab === "dpps"
+                    const showNotes = chapterTab === "all" || chapterTab === "notes"
+                    
+                    const dpps = activeChapter.pdfs?.filter((p:any) => p.type === "DPP") || []
+                    const notes = activeChapter.pdfs?.filter((p:any) => p.type === "NOTE") || []
+                    const videos = activeChapter.videos || []
+
+                    if (!showLectures && !showDPPs && !showNotes) {
+                      return <div className="text-center py-12 text-gray-500">Coming soon.</div>
+                    }
+
+                    if (showLectures && videos.length === 0 && showDPPs && dpps.length === 0 && showNotes && notes.length === 0) {
+                      return <div className="text-center py-12 text-gray-500">No content uploaded here yet.</div>
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {showLectures && videos.map((video: any) => {
+                          const isUpcoming = video.scheduledAt && new Date(video.scheduledAt) > new Date()
+                          const isCompleted = completedItems.includes(video.id)
+                          return (
+                            <div key={video.id} className="flex flex-col sm:flex-row gap-5 p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                              <div className="absolute -bottom-px left-5 right-5 border-b border-dashed border-gray-200 hidden group-last:block" />
+                              <div className="w-full sm:w-44 aspect-video rounded-lg overflow-hidden shrink-0 bg-gray-100 relative">
+                                {getYoutubeThumbnail(video.youtubeId || video.videoUrl) ? (
+                                  <img src={getYoutubeThumbnail(video.youtubeId || video.videoUrl)!} alt="Thumbnail" className={`w-full h-full object-cover ${isUpcoming ? 'opacity-50' : ''}`} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400"><Video className="w-8 h-8" /></div>
+                                )}
+                                <div className="absolute bottom-1.5 left-1.5 bg-[#e53935] w-5 h-5 rounded-full flex items-center justify-center shadow-sm"><Play className="w-2.5 h-2.5 text-white ml-0.5" /></div>
+                                {video.duration ? <div className="absolute bottom-1.5 right-1.5 bg-black/70 px-1.5 py-0.5 rounded text-[10px] text-white font-medium">{formatDuration(video.duration)}</div> : null}
+                                {isUpcoming && <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center flex-col"><span className="bg-black text-white text-[10px] font-bold px-2 py-1 rounded">UPCOMING</span></div>}
+                              </div>
+                              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                                      <span className="text-[#5a67d8]">Lecture</span> 
+                                      <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                      <span>{video.createdAt ? new Date(video.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "Unknown Date"}</span>
+                                    </div>
+                                    <div onClick={(e) => toggleComplete(video.id, e)}>
+                                      <CheckCircle2 className={`w-5 h-5 cursor-pointer transition-colors ${isCompleted ? 'text-green-500 fill-green-50' : 'text-gray-300 hover:text-green-400'}`} />
+                                    </div>
+                                  </div>
+                                  <h4 className="text-[15px] font-semibold text-gray-900 mt-1 line-clamp-2 leading-snug">{video.title}</h4>
+                                  {video.duration && <p className="text-[11px] text-gray-500 mt-1 font-medium">{Math.floor(video.duration/3600)}h:{Math.floor((video.duration%3600)/60)}m</p>}
+                                </div>
+                                <div className="flex gap-3 mt-4">
+                                  <button onClick={() => handlePlayVideo(video)} disabled={isUpcoming} className="px-5 py-2 bg-[#f4f5f8] hover:bg-[#e2e8f0] text-gray-900 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors min-w-[110px] disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <Play className="w-3.5 h-3.5 fill-current" /> Watch
+                                  </button>
+                                  <button onClick={() => setAttachmentsModal(video)} className="px-5 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-lg transition-colors min-w-[110px]">Notes & more</button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {(showDPPs || showNotes) && [...dpps, ...notes].filter(p => (showDPPs && p.type === "DPP") || (showNotes && p.type === "NOTE")).map((pdf: any) => {
+                          const isCompleted = completedItems.includes(pdf.id)
+                          return (
+                            <a key={pdf.id} href={isEnrolled ? pdf.url : "#"} target={isEnrolled ? "_blank" : undefined} rel="noreferrer" onClick={(e) => { if(!isEnrolled) { e.preventDefault(); alert("Please enroll to view."); } }} className="flex flex-col sm:flex-row gap-5 p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                              <div className="absolute -bottom-px left-5 right-5 border-b border-dashed border-gray-200 hidden group-last:block" />
+                              <div className="w-full sm:w-44 aspect-video rounded-lg overflow-hidden shrink-0 bg-blue-50 flex items-center justify-center relative">
+                                <FileText className="w-10 h-10 text-blue-400" />
+                                <div className="absolute bottom-1.5 left-1.5 bg-blue-500 w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                                  <FileText className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                                      <span className="text-blue-500">{pdf.type === "DPP" ? "DPP" : "Note"}</span> 
+                                      <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                      <span>{new Date(pdf.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                    </div>
+                                    <div onClick={(e) => toggleComplete(pdf.id, e)}>
+                                      <CheckCircle2 className={`w-5 h-5 cursor-pointer transition-colors ${isCompleted ? 'text-green-500 fill-green-50' : 'text-gray-300 hover:text-green-400'}`} />
+                                    </div>
+                                  </div>
+                                  <h4 className="text-[15px] font-semibold text-gray-900 mt-1 line-clamp-2 leading-snug">{pdf.title}</h4>
+                                </div>
+                                <div className="flex gap-3 mt-4">
+                                  <span className="px-5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-colors min-w-[110px]">
+                                    Open Document
+                                  </span>
+                                </div>
+                              </div>
+                            </a>
+                          )
+                        })}
+
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Fullscreen Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[100] bg-[#0b1121] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="h-16 flex items-center justify-between px-6 bg-gradient-to-b from-black/80 to-transparent z-10 shrink-0 absolute top-0 left-0 right-0">
+            <h2 className="text-white font-bold text-lg drop-shadow-md">{activeVideo.title}</h2>
+            <button 
+              onClick={() => setActiveVideo(null)} 
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-white text-sm font-semibold transition-colors flex items-center gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back to Course
+            </button>
+          </div>
+          <div className="flex-1 w-full h-full flex items-center justify-center p-4 sm:p-8">
+            <div className="w-full max-w-6xl aspect-video bg-black rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+              <VideoPlayer 
+                videoId={activeVideo.youtubeId} 
+                isLive={activeVideo.videoType === "LIVE" && (!activeVideo.scheduledAt || !activeVideo.duration || new Date() < new Date(new Date(activeVideo.scheduledAt).getTime() + activeVideo.duration * 1000))} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attachments Modal */}
+      {attachmentsModal && (
+        <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setAttachmentsModal(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-bold text-gray-900">Attachments</h3>
+              <button onClick={() => setAttachmentsModal(null)} className="p-1 hover:bg-gray-100 rounded-md text-gray-500">
+                <span className="text-2xl leading-none">&times;</span>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-6">
+              
+              {/* NOTES */}
+              {attachmentsModal.pdfs?.filter((p:any) => p.type === "NOTE").length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-500 mb-3 flex items-center justify-between">NOTES <ChevronDown className="w-4 h-4" /></h4>
+                  <div className="space-y-2">
+                    {attachmentsModal.pdfs.filter((p:any) => p.type === "NOTE").map((pdf:any) => (
+                      <div key={pdf.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg shadow-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="w-5 h-5 text-gray-400 shrink-0" />
+                          <p className="text-sm text-gray-700 truncate font-medium">{pdf.title}</p>
+                        </div>
+                        <a href={pdf.url} target="_blank" rel="noreferrer" className="shrink-0 text-gray-500 hover:text-gray-900 p-1 text-xs underline font-medium">
+                          Download
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DPP */}
+              {attachmentsModal.pdfs?.filter((p:any) => p.type === "DPP").length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-500 mb-3 flex items-center justify-between">DPP <ChevronDown className="w-4 h-4" /></h4>
+                  <div className="space-y-2">
+                    {attachmentsModal.pdfs.filter((p:any) => p.type === "DPP").map((pdf:any) => (
+                      <div key={pdf.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg shadow-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="w-5 h-5 text-gray-400 shrink-0" />
+                          <p className="text-sm text-gray-700 truncate font-medium">{pdf.title}</p>
+                        </div>
+                        <a href={pdf.url} target="_blank" rel="noreferrer" className="shrink-0 bg-[#5a67d8] hover:bg-[#434ebc] text-white px-3 py-1.5 rounded-full flex items-center justify-center gap-1 text-[11px] font-bold transition-colors">
+                          <Play className="w-2.5 h-2.5 fill-current" /> Start
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!attachmentsModal.pdfs || attachmentsModal.pdfs.length === 0) && (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No attachments linked to this lecture.
+                </div>
               )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Main Content Area - Only visible if enrolled */}
-        {isEnrolled && !activeSubject && (
-          <>
-            {renderTabs()}
-            
-            {activeTab === "all-classes" ? (
-              <>
-                {/* Notice Banner */}
-                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-100">Welcome to {batch.title}!</h4>
-                    <p className="text-sm text-blue-200/70">Classes will be conducted as per the schedule. Check announcements for updates.</p>
-                  </div>
-                </div>
-
-                <h2 className="text-xl font-bold text-white mb-4 mt-8">Subjects</h2>
-                {renderSubjectsList()}
-              </>
-            ) : (
-              <div className="p-16 text-center border border-[#2a344a] border-dashed rounded-xl mt-8">
-                <p className="text-xl font-medium text-slate-300">Coming Soon</p>
-                <p className="text-slate-500 mt-2">This feature is currently under development.</p>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* If subject is active but no chapter, show Chapters List (Level 2) */}
-        {isEnrolled && activeSubject && !activeChapter && (
-          <>
-            <div className="mb-6 flex items-center gap-2 text-sm text-slate-400">
-              <button onClick={() => setActiveSubject(null)} className="hover:text-white transition-colors">Subjects</button>
-              <ChevronRight className="w-4 h-4" />
-              <span className="text-slate-200 font-medium">{activeSubject.name}</span>
-            </div>
-            {renderChaptersList()}
-          </>
-        )}
-
-        {/* If chapter is active, show Videos List (Level 3) */}
-        {isEnrolled && activeSubject && activeChapter && (
-          <>
-            <div className="mb-4 flex items-center gap-2 text-sm text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
-              <button onClick={() => { setActiveChapter(null); setActiveSubject(null) }} className="hover:text-white transition-colors">Subjects</button>
-              <ChevronRight className="w-4 h-4 shrink-0" />
-              <button onClick={() => setActiveChapter(null)} className="hover:text-white transition-colors">{activeSubject.name}</button>
-              <ChevronRight className="w-4 h-4 shrink-0" />
-              <span className="text-slate-200 font-medium">{activeChapter.name}</span>
-            </div>
-            {renderVideosList()}
-          </>
-        )}
-
-      </div>
     </div>
   )
 }

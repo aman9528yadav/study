@@ -106,6 +106,7 @@ model Video {
   description String?
   youtubeId   String?  // For YouTube Links
   videoUrl    String?  // For Direct Video Uploads
+  videoType   String   @default("RECORDED") // RECORDED, LIVE
   duration    Int?     // in seconds
   order       Int      @default(0)
   scheduledAt DateTime? // For upcoming/scheduled videos
@@ -113,6 +114,7 @@ model Video {
   createdAt   DateTime @default(now())
 
   chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  pdfs        PDF[]
 }
 
 model PDF {
@@ -123,6 +125,9 @@ model PDF {
   url       String
   order     Int      @default(0)
   createdAt DateTime @default(now())
+
+  videoId   String?
+  video     Video?   @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 }

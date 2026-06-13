@@ -140,3 +140,54 @@ export async function deleteBatch(id: string) {
     return { success: false, error: "Failed to delete batch" }
   }
 }
+
+export async function getUpcomingLiveClasses() {
+  try {
+    const user = await getUserSession()
+    if (!user) return { success: false, error: "Not logged in" }
+    
+    const videos = await prisma.video.findMany({
+      where: {
+        OR: [
+          { videoType: "LIVE" },
+          { scheduledAt: { not: null } }
+        ],
+        chapter: {
+          subject: {
+            batch: {
+              enrollments: {
+                some: { userId: user.id, status: "APPROVED" }
+              }
+            }
+          }
+        }
+      },
+      include: {
+        chapter: {
+          include: {
+            subject: {
+              include: {
+                batch: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        scheduledAt: 'asc'
+      }
+    })
+    
+    const upcomingVideos = videos.filter(video => {
+      if (!video.scheduledAt) return true;
+      const durationSeconds = video.duration || 0;
+      const endTime = new Date(new Date(video.scheduledAt).getTime() + durationSeconds * 1000);
+      return new Date() < endTime;
+    });
+
+    return { success: true, data: upcomingVideos }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Failed to fetch live classes" }
+  }
+}
