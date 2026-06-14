@@ -60,15 +60,15 @@ export async function createStudent(formData: FormData) {
 
 export async function updateStudentStatus(studentId: string, status: string, suspendedUntil?: Date | null) {
   try {
-    const suspendDate = status === 'SUSPENDED' ? (suspendedUntil ? suspendedUntil.toISOString() : null) : null;
+    const suspendDate = status === 'SUSPENDED' ? (suspendedUntil || null) : null;
     
-    // Using executeRawUnsafe to bypass Prisma Client type-check temporarily due to Windows DLL lock
-    await prisma.$executeRawUnsafe(
-      `UPDATE User SET status = ?, suspendedUntil = ? WHERE id = ?`,
-      status,
-      suspendDate,
-      studentId
-    );
+    await prisma.user.update({
+      where: { id: studentId },
+      data: {
+        status: status,
+        suspendedUntil: suspendDate
+      }
+    });
     
     revalidatePath("/admin/students")
     return { success: true }

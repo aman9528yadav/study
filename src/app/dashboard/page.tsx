@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const batchVideos = data.upcomingVideos?.filter((v: any) => v.batchId === selectedBatchId) || []
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 -m-6 sm:-m-8 pb-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-6">
       {/* Top Header Section with Dark Background */}
       <div className="bg-[#1c2438] text-white pt-8 pb-16 px-8 relative overflow-visible">
         {/* Subtle background decoration */}
@@ -103,44 +103,44 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-8 -mt-8 relative z-10 space-y-12" onClick={() => isDropdownOpen && setIsDropdownOpen(false)}>
+      <div className="w-full px-4 -mt-8 relative z-10 space-y-8" onClick={() => isDropdownOpen && setIsDropdownOpen(false)}>
         {/* Batch Offerings */}
         <div>
           <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Batch Offerings</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <Link href={`/dashboard/batches/${selectedBatchId}`}>
-              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x">
+            <Link href={`/dashboard/batches/${selectedBatchId}`} className="min-w-[200px] snap-center">
+              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl h-full">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
                     <Video className="w-6 h-6" />
                   </div>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">All Classes</span>
                 </div>
-                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-indigo-400" />
+                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-indigo-400 shrink-0" />
               </Card>
             </Link>
 
-            <Link href="#">
-              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl">
+            <Link href="#" className="min-w-[200px] snap-center">
+              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl h-full">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
                     <MessageCircle className="w-6 h-6" />
                   </div>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 transition-colors">My Doubts</span>
                 </div>
-                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-blue-400" />
+                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-blue-400 shrink-0" />
               </Card>
             </Link>
             
-            <Link href={`/dashboard/batches/${selectedBatchId}?tab=tests`}>
-              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl">
+            <Link href={`/dashboard/batches/${selectedBatchId}?tab=tests`} className="min-w-[200px] snap-center">
+              <Card className="p-4 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border-none shadow-sm rounded-xl h-full">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center">
                     <PlayCircle className="w-6 h-6" />
                   </div>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-purple-600 transition-colors">Tests</span>
                 </div>
-                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-purple-400" />
+                <ChevronDown className="w-5 h-5 -rotate-90 text-slate-300 group-hover:text-purple-400 shrink-0" />
               </Card>
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-4">
               {batchVideos.map((video: any) => (
                 <Link key={video.id} href={`/dashboard/batches/${selectedBatchId}`}>
                   <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 group">

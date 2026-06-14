@@ -134,11 +134,25 @@ export function VideoPlayer({ videoId, isLive = false }: { videoId: string, isLi
     return map[q] || q
   }
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(err => console.log(err))
+      try {
+        await containerRef.current?.requestFullscreen()
+        // @ts-ignore
+        if (screen.orientation && screen.orientation.lock) {
+          // @ts-ignore
+          await screen.orientation.lock('landscape').catch(() => {})
+        }
+      } catch (err) {
+        console.log(err)
+      }
     } else {
       document.exitFullscreen()
+      // @ts-ignore
+      if (screen.orientation && screen.orientation.unlock) {
+        // @ts-ignore
+        screen.orientation.unlock()
+      }
     }
   }
 

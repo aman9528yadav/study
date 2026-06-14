@@ -341,8 +341,7 @@ export default function StudentClassroomPage() {
           {activeSubject && activeChapter && (
             <div className="flex bg-white min-h-[calc(100vh-64px)] max-w-[1400px] mx-auto border-x border-gray-200">
               
-              {/* Left Sidebar: Chapters List */}
-              <div className="w-72 shrink-0 border-r border-gray-200 bg-gray-50 hidden md:block overflow-y-auto max-h-[calc(100vh-64px)]">
+              <div className="hidden w-72 shrink-0 border-r border-gray-200 bg-gray-50 md:hidden overflow-y-auto max-h-[calc(100vh-64px)]">
                 <div className="p-4 text-[11px] font-bold text-gray-600 uppercase tracking-widest pt-6 mb-2">
                   ALL CHAPTERS
                 </div>
@@ -372,7 +371,7 @@ export default function StudentClassroomPage() {
               <div className="flex-1 overflow-y-auto max-h-[calc(100vh-64px)] relative">
                 
                 {/* Tabs */}
-                <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-gray-200 px-8 pt-6 pb-0 flex gap-8">
+                <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-gray-200 px-4 pt-4 pb-0 flex gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
                   {["All", "Lectures", "DPPs", "Notes", "DPP PDFs", "DPP Videos"].map(t => {
                     const id = t.toLowerCase().replace(" ", "-")
                     const isActive = chapterTab === id
@@ -390,7 +389,7 @@ export default function StudentClassroomPage() {
                   })}
                 </div>
 
-                <div className="p-8 pb-32">
+                <div className="p-4 pb-32">
                   {/* List of Content Cards */}
                   {(() => {
                     const showLectures = chapterTab === "all" || chapterTab === "lectures"
