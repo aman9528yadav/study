@@ -3,6 +3,8 @@ import { Users, LayoutDashboard, Settings, Video, Book, FileText, MessageSquare,
 import { UserMenu } from "@/components/user-menu"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#f8f9fa] text-[#495057]">
