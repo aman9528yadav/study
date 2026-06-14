@@ -44,6 +44,9 @@ export function MobileHeader({ children }: { children: React.ReactNode }) {
                 <Link onClick={() => setIsOpen(false)} href="/dashboard/ebooks" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-50">
                   <BookOpen className="w-5 h-5" /> Ebooks
                 </Link>
+                <Link onClick={() => setIsOpen(false)} href="/dashboard/attendance" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-50">
+                  <Calendar className="w-5 h-5" /> Attendance
+                </Link>
                 <Link onClick={() => setIsOpen(false)} href="/dashboard/settings" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-50">
                   <Settings className="w-5 h-5" /> Settings
                 </Link>

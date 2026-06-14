@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { getStudentDashboardData } from "@/app/actions/dashboard"
 import { Card } from "@/components/ui/card"
-import { ChevronDown, PlayCircle, MessageCircle, Clock, Video } from "lucide-react"
+import { ChevronDown, PlayCircle, MessageCircle, Clock, Video, Sun, Moon, CloudSun, Play } from "lucide-react"
 import Link from "next/link"
 import { getTimeUntil } from "@/lib/utils"
 
@@ -60,6 +60,17 @@ export default function DashboardPage() {
   const selectedBatch = data.enrolledBatchesList.find((b: any) => b.id === selectedBatchId)
   const batchVideos = data.upcomingVideos?.filter((v: any) => v.batchId === selectedBatchId) || []
 
+  const hour = new Date().getHours()
+  let greeting = "Good Evening"
+  let GreetingIcon = Moon
+  if (hour >= 5 && hour < 12) {
+    greeting = "Good Morning"
+    GreetingIcon = Sun
+  } else if (hour >= 12 && hour < 17) {
+    greeting = "Good Afternoon"
+    GreetingIcon = CloudSun
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-6">
       {/* Top Header Section with Dark Background */}
@@ -68,42 +79,103 @@ export default function DashboardPage() {
         <div className="absolute top-0 left-0 right-0 bottom-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, #4f46e5 0%, transparent 50%), radial-gradient(circle at 0% 100%, #ec4899 0%, transparent 50%)' }}></div>
         
         <div className="max-w-6xl mx-auto relative z-20">
-          <p className="text-xs font-bold tracking-wider text-slate-400 mb-2 uppercase">Your Batch</p>
+          <div className="flex items-center gap-2 text-indigo-400 mb-2">
+            <GreetingIcon className="w-5 h-5" />
+            <span className="font-semibold tracking-wide">{greeting}, {data.userName.split(' ')[0]}!</span>
+          </div>
           
-          <div className="relative inline-block">
-            <button 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 text-3xl sm:text-4xl font-bold hover:text-indigo-300 transition-colors focus:outline-none"
-            >
-              <span className="truncate max-w-[280px] sm:max-w-md">{selectedBatch?.title || "Select Batch"}</span>
-              <ChevronDown className={`w-6 h-6 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="relative inline-block">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-3 text-3xl sm:text-4xl font-bold hover:text-indigo-300 transition-colors focus:outline-none group"
+              >
+                <span className="truncate max-w-[280px] sm:max-w-md">{selectedBatch?.title || "Select Batch"}</span>
+                <ChevronDown className={`w-6 h-6 transition-transform group-hover:translate-y-1 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 mt-3 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-slate-200 dark:border-slate-700 overflow-hidden z-[100]">
+                  {data.enrolledBatchesList.map((batch: any) => (
+                    <button
+                      key={batch.id}
+                      onClick={() => {
+                        setSelectedBatchId(batch.id)
+                        setIsDropdownOpen(false)
+                      }}
+                      className={`w-full text-left px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${batch.id === selectedBatchId ? 'bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold border-l-4 border-l-indigo-600' : 'text-slate-700 dark:text-slate-300 font-medium border-l-4 border-l-transparent'}`}
+                    >
+                      {batch.title}
+                    </button>
+                  ))}
+                  <Link href="/dashboard/batches" className="w-full block text-center px-5 py-3 bg-slate-50 dark:bg-slate-900 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium transition-colors">
+                    View All My Batches
+                  </Link>
+                </div>
+              )}
+            </div>
             
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div className="absolute top-full left-0 mt-3 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-slate-200 dark:border-slate-700 overflow-hidden z-[100]">
-                {data.enrolledBatchesList.map((batch: any) => (
-                  <button
-                    key={batch.id}
-                    onClick={() => {
-                      setSelectedBatchId(batch.id)
-                      setIsDropdownOpen(false)
-                    }}
-                    className={`w-full text-left px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${batch.id === selectedBatchId ? 'bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold border-l-4 border-l-indigo-600' : 'text-slate-700 dark:text-slate-300 font-medium border-l-4 border-l-transparent'}`}
-                  >
-                    {batch.title}
-                  </button>
-                ))}
-                <Link href="/dashboard/batches" className="w-full block text-center px-5 py-3 bg-slate-50 dark:bg-slate-900 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium transition-colors">
-                  View All My Batches
-                </Link>
-              </div>
-            )}
+            <div className="text-slate-400 text-sm">
+              You have <span className="text-white font-bold">{data.upcomingVideos.length}</span> upcoming classes.
+            </div>
           </div>
         </div>
       </div>
 
       <div className="w-full px-4 -mt-8 relative z-10 space-y-8" onClick={() => isDropdownOpen && setIsDropdownOpen(false)}>
+        {/* Continue Watching Carousel */}
+        {data.recentVideos && data.recentVideos.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Continue Watching</h3>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 snap-x">
+              {data.recentVideos.map((video: any, idx: number) => {
+                // Simulate progress for UI aesthetics (e.g., first video 70% done, second 30%, etc)
+                const simulatedProgress = Math.max(10, 80 - (idx * 25))
+                
+                return (
+                  <Link key={video.id} href={`/dashboard/batches/${video.batchId}?v=${video.id}`} className="min-w-[280px] sm:min-w-[320px] snap-center group">
+                    <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300 rounded-xl bg-slate-900 relative">
+                      <div className="relative aspect-video">
+                        {getYoutubeThumbnail(video.youtubeId || video.videoUrl) ? (
+                          <img 
+                            src={getYoutubeThumbnail(video.youtubeId || video.videoUrl)!}
+                            alt={video.title}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                            <Video className="w-10 h-10 text-slate-600" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
+                        
+                        {/* Play button overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]">
+                          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30">
+                            <Play className="w-6 h-6 text-white ml-1 fill-white" />
+                          </div>
+                        </div>
+
+                        {/* Title overlay */}
+                        <div className="absolute bottom-3 left-4 right-4 z-10">
+                          <h4 className="text-white font-bold text-sm line-clamp-1 shadow-black">{video.title}</h4>
+                          <p className="text-slate-300 text-[10px] uppercase tracking-wider font-semibold line-clamp-1">{video.batchName}</p>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-700">
+                          <div className="h-full bg-red-600 rounded-r-full" style={{ width: `${simulatedProgress}%` }}></div>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Batch Offerings */}
         <div>
           <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Batch Offerings</h3>

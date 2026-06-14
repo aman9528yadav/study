@@ -25,6 +25,7 @@ model User {
   testResults   Result[]
   doubts        Doubt[]
   doubtReplies  DoubtReply[]
+  attendances   Attendance[]
 }
 
 model Device {
@@ -62,6 +63,7 @@ model Batch {
 
   subjects     Subject[]
   enrollments  Enrollment[]
+  attendances  Attendance[]
 }
 
 model Enrollment {
@@ -240,4 +242,18 @@ model Ebook {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  userId    String
+  batchId   String
+  date      String   // Format: "YYYY-MM-DD"
+  status    String   @default("PRESENT") // PRESENT, ABSENT
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, batchId, date])
 }

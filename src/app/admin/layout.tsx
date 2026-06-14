@@ -73,18 +73,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </div>
             </div>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4" />
-                <span className="font-medium text-sm">Tests</span>
-              </div>
-            </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-4 h-4" />
-                <span className="font-medium text-sm">Chat Support</span>
-              </div>
-            </Link>
           </nav>
         </div>
 
@@ -97,22 +85,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <span className="font-medium text-sm">Batches</span>
               </div>
             </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+            <Link href="/admin/attendance" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
               <div className="flex items-center gap-3">
                 <CalendarCheck className="w-4 h-4" />
                 <span className="font-medium text-sm">Attendance</span>
               </div>
             </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
+            <Link href="/admin/fees" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
               <div className="flex items-center gap-3">
                 <DollarSign className="w-4 h-4" />
                 <span className="font-medium text-sm">Fees</span>
-              </div>
-            </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <ImageIcon className="w-4 h-4" />
-                <span className="font-medium text-sm">Banners</span>
               </div>
             </Link>
           </nav>
@@ -121,30 +103,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="px-4 py-2 mb-6">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">System</h3>
           <nav className="space-y-1">
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <FileText className="w-4 h-4" />
-                <span className="font-medium text-sm">Pages</span>
-              </div>
-            </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <Globe className="w-4 h-4" />
-                <span className="font-medium text-sm">Landing Page</span>
-              </div>
-            </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <Folder className="w-4 h-4" />
-                <span className="font-medium text-sm">File Manager</span>
-              </div>
-            </Link>
-            <Link href="#" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <FormInput className="w-4 h-4" />
-                <span className="font-medium text-sm">Form Builder</span>
-              </div>
-            </Link>
             <Link href="/admin/settings" className="flex items-center justify-between px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md transition-colors">
               <div className="flex items-center gap-3">
                 <Settings className="w-4 h-4" />

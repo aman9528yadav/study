@@ -1,22 +1,45 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { 
   User, Bell, Moon, Lock, Shield, 
   HelpCircle, LogOut, ChevronRight, 
-  Camera, Trash2, Mail
+  Camera, Trash2, Mail, X, Loader2
 } from "lucide-react"
+import { updateProfile } from "@/app/actions/auth"
 
 export default function SettingsClient({ userName, userEmail }: { userName: string, userEmail: string }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   // UI States for demo purposes
   const [darkMode, setDarkMode] = useState(false)
   const [pushNotifs, setPushNotifs] = useState(true)
   const [emailNotifs, setEmailNotifs] = useState(true)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editName, setEditName] = useState(userName)
+  const [editPhone, setEditPhone] = useState("")
 
   const initials = userName.substring(0, 2).toUpperCase()
 
   const handleLogout = () => {
     alert("Logout clicked")
+  }
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append("name", editName)
+      formData.append("phone", editPhone)
+      const res = await updateProfile(formData)
+      if (res.error) {
+        alert(res.error)
+      } else {
+        setIsEditingProfile(false)
+        router.refresh()
+      }
+    })
   }
 
   return (
@@ -35,7 +58,7 @@ export default function SettingsClient({ userName, userEmail }: { userName: stri
           </div>
           <h2 className="text-2xl font-bold tracking-tight">{userName}</h2>
           <p className="text-indigo-200 text-sm font-medium mt-1">{userEmail}</p>
-          <button className="mt-4 bg-white/10 hover:bg-white/20 px-5 py-2 rounded-full text-sm font-semibold backdrop-blur-sm transition-colors border border-white/10">
+          <button onClick={() => setIsEditingProfile(true)} className="mt-4 bg-white/10 hover:bg-white/20 px-5 py-2 rounded-full text-sm font-semibold backdrop-blur-sm transition-colors border border-white/10">
             Edit Profile
           </button>
         </div>
@@ -166,6 +189,49 @@ export default function SettingsClient({ userName, userEmail }: { userName: stri
         </section>
 
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">Edit Profile</h3>
+              <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateProfile} className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Name</label>
+                <input 
+                  type="text" 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Phone Number (Optional)</label>
+                <input 
+                  type="text" 
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={isPending}
+                className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save Changes
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

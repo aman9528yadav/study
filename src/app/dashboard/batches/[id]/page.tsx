@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Play, Lock, ChevronRight, ChevronLeft, Calendar, FileText, CheckCircle2, ChevronDown, Bell, Search, Menu, Video } from "lucide-react"
 import { getBatchContent } from "@/app/actions/content"
 import { checkEnrollment, enrollInBatch } from "@/app/actions/enrollment"
+import { markAttendance, getStudentAttendanceStatus } from "@/app/actions/attendance"
 import { VideoPlayer } from "@/components/video-player"
 import Link from "next/link"
 
@@ -31,6 +32,7 @@ export default function StudentClassroomPage() {
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<string | null>(null)
   const [enrolling, setEnrolling] = useState(false)
+  const [attendanceMarked, setAttendanceMarked] = useState(false)
   
   // Navigation State
   const [activeSubject, setActiveSubject] = useState<any>(null)
@@ -56,9 +58,10 @@ export default function StudentClassroomPage() {
 
   const fetchData = async () => {
     setLoading(true)
-    const [contentRes, enrollRes] = await Promise.all([
+    const [contentRes, enrollRes, attendanceRes] = await Promise.all([
       getBatchContent(batchId),
-      checkEnrollment(batchId)
+      checkEnrollment(batchId),
+      getStudentAttendanceStatus(batchId)
     ])
 
     if (contentRes.success && contentRes.data) {
@@ -69,6 +72,8 @@ export default function StudentClassroomPage() {
       setIsEnrolled(enrollRes.status === "APPROVED")
       setEnrollmentStatus(enrollRes.status)
     }
+    
+    setAttendanceMarked(attendanceRes)
     
     setLoading(false)
   }
@@ -128,6 +133,16 @@ export default function StudentClassroomPage() {
     setEnrolling(false)
   }
 
+  const handleMarkAttendance = async () => {
+    if (attendanceMarked) return
+    const res = await markAttendance(batchId)
+    if (res.success) {
+      setAttendanceMarked(true)
+    } else {
+      alert(res.error || "Failed to mark attendance")
+    }
+  }
+
   const handlePlayVideo = (video: any) => {
     if (!isEnrolled) return
     if (video.scheduledAt && new Date(video.scheduledAt) > new Date()) {
@@ -180,6 +195,19 @@ export default function StudentClassroomPage() {
                 className="w-64 pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all" 
               />
             </div>
+            {isEnrolled && (
+              <button 
+                onClick={handleMarkAttendance}
+                disabled={attendanceMarked}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors border ${
+                  attendanceMarked 
+                    ? 'bg-green-50 text-green-600 border-green-200 cursor-not-allowed' 
+                    : 'bg-white hover:bg-blue-50 text-blue-600 border-blue-200'
+                }`}
+              >
+                {attendanceMarked ? '✓ Present Today' : 'Mark Attendance'}
+              </button>
+            )}
             <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
               <span className="text-[#5a67d8] font-bold text-xs uppercase">XP</span>
               <span className="font-semibold text-sm">0</span>
