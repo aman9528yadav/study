@@ -4,30 +4,38 @@ import { UserMenu } from "@/components/user-menu"
 import { getUserSession, logout } from "@/app/actions/auth"
 import { prisma } from "@/lib/prisma"
 import { MobileHeader, BottomNav } from "@/components/mobile-nav"
+import { getSystemSettings } from "@/app/actions/settings"
+import { MaintenanceScreen } from "@/components/maintenance-screen"
+import { MaintenanceWatcher } from "@/components/maintenance-watcher"
 
 export const dynamic = "force-dynamic"
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const userSession = await getUserSession()
+
   let isBlocked = false
   let blockReason = ""
   let isTemporary = false
+  let dbUser = null
 
   if (userSession) {
-    const user = await prisma.user.findUnique({ where: { id: userSession.id } })
-    if (user) {
-      if (user.status === "BANNED") {
+    dbUser = await prisma.user.findUnique({
+      where: { id: userSession.id }
+    })
+    
+    if (dbUser) {
+      if (dbUser.status === "BANNED") {
         isBlocked = true
         blockReason = "Your account has been permanently banned by an administrator."
-      } else if (user.status === "SUSPENDED") {
+      } else if (dbUser.status === "SUSPENDED") {
         isBlocked = true
         isTemporary = true
-        if (user.suspendedUntil) {
-          if (new Date() > new Date(user.suspendedUntil)) {
+        if (dbUser.suspendedUntil) {
+          if (new Date() > new Date(dbUser.suspendedUntil)) {
             isBlocked = false
-            prisma.user.update({ where: { id: user.id }, data: { status: 'ACTIVE', suspendedUntil: null } }).catch(console.error)
+            prisma.user.update({ where: { id: dbUser.id }, data: { status: 'ACTIVE', suspendedUntil: null } }).catch(console.error)
           } else {
-            const banDate = new Date(user.suspendedUntil).toLocaleString(undefined, {
+            const banDate = new Date(dbUser.suspendedUntil).toLocaleString(undefined, {
               dateStyle: 'medium',
               timeStyle: 'short'
             })
@@ -38,6 +46,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         }
       }
     }
+  }
+
+  // Check Maintenance Mode
+  const settings = await getSystemSettings()
+  const isMaintenanceActive = settings?.maintenanceMode === true
+  const isAdmin = userSession?.user_metadata?.role === "ADMIN" || dbUser?.role === "ADMIN"
+
+  if (isMaintenanceActive && !isAdmin) {
+    return <MaintenanceScreen message={settings.maintenanceMessage} endTime={settings.maintenanceEndTime} />
   }
 
   if (isBlocked) {
@@ -69,6 +86,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       </MobileHeader>
       
       <main className="flex-1 flex flex-col w-full max-w-md mx-auto sm:max-w-none bg-[#f4f5f8] shadow-sm relative overflow-hidden pb-8">
+        <MaintenanceWatcher currentStatus={isMaintenanceActive} />
+        {isMaintenanceActive && isAdmin && (
+          <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-bold shadow-md z-50 flex items-center justify-center gap-2">
+            ⚠️ Maintenance Mode is currently ACTIVE. Students cannot access the platform.
+          </div>
+        )}
         {children}
       </main>
       

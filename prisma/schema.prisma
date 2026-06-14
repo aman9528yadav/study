@@ -257,3 +257,11 @@ model Attendance {
 
   @@unique([userId, batchId, date])
 }
+
+model SystemSetting {
+  id                 String    @id @default("global")
+  maintenanceMode    Boolean   @default(false)
+  maintenanceMessage String?
+  maintenanceEndTime DateTime?
+  updatedAt          DateTime  @updatedAt
+}
